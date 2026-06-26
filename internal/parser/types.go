@@ -33,6 +33,7 @@ type ResourceChange struct {
 type PlanAST struct {
 	TerraformVersion string                    `json:"terraform_version"`
 	FormatVersion    string                    `json:"format_version"`
+	Workspace        string                    `json:"workspace,omitempty"`
 	Variables        map[string]Variable       `json:"variables,omitempty"`
 	Changes          []ResourceChange          `json:"changes"`
 	OutputChanges    map[string]OutputChange   `json:"output_changes,omitempty"`

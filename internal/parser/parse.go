@@ -10,6 +10,7 @@ import (
 type terraformPlanJSON struct {
 	FormatVersion    string            `json:"format_version"`
 	TerraformVersion string            `json:"terraform_version"`
+	Workspace        string            `json:"workspace,omitempty"`
 	Variables        map[string]struct {
 		Value any `json:"value"`
 	} `json:"variables,omitempty"`
@@ -59,6 +60,7 @@ func ParsePlan(data []byte) (*PlanAST, error) {
 	ast := &PlanAST{
 		TerraformVersion: raw.TerraformVersion,
 		FormatVersion:    raw.FormatVersion,
+		Workspace:        raw.Workspace,
 		Variables:        make(map[string]Variable, len(raw.Variables)),
 		Changes:          make([]ResourceChange, 0, len(raw.ResourceChanges)),
 		OutputChanges:    make(map[string]OutputChange, len(raw.OutputChanges)),

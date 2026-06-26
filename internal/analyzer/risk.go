@@ -90,6 +90,7 @@ func resourceMultiplier(resourceType string) float64 {
 }
 
 // tierFromScore maps a score to its risk tier.
+// tierFromScore maps a score to its risk tier.
 func tierFromScore(score float64) RiskTier {
 	switch {
 	case score >= 85:
@@ -100,6 +101,38 @@ func tierFromScore(score float64) RiskTier {
 		return TierMedium
 	default:
 		return TierLow
+	}
+}
+
+// TierFromName converts a severity string to a RiskTier.
+func TierFromName(name string) RiskTier {
+	switch name {
+	case "critical":
+		return TierCritical
+	case "high":
+		return TierHigh
+	case "medium":
+		return TierMedium
+	case "low":
+		return TierLow
+	default:
+		return ""
+	}
+}
+
+// TierWeight returns a numeric weight for comparison (higher = more severe).
+func TierWeight(t RiskTier) int {
+	switch t {
+	case TierCritical:
+		return 4
+	case TierHigh:
+		return 3
+	case TierMedium:
+		return 2
+	case TierLow:
+		return 1
+	default:
+		return 0
 	}
 }
 
@@ -136,4 +169,65 @@ func ScorePlan(ast *parser.PlanAST) *PlanScore {
 		ResourceScores: scores,
 		Counts:         counts,
 	}
+}
+
+// ConfigRuleMatch is a minimal match result from custom rules.
+type ConfigRuleMatch struct {
+	Address  string
+	Severity string
+}
+
+// ApplyCustomRules escalates resource tiers where a matched rule severity exceeds
+// the computed risk tier. Modifies ps in-place.
+func ApplyCustomRules(ps *PlanScore, ruleMatches []ConfigRuleMatch) {
+	if len(ruleMatches) == 0 {
+		return
+	}
+	// Build map: address → highest severity from matched rules
+	addrEscalation := make(map[string]RiskTier)
+	for _, m := range ruleMatches {
+		rt := TierFromName(m.Severity)
+		if rt == "" {
+			continue
+		}
+		if existing, ok := addrEscalation[m.Address]; !ok || TierWeight(rt) > TierWeight(existing) {
+			addrEscalation[m.Address] = rt
+		}
+	}
+
+	// Apply escalations
+	for i := range ps.ResourceScores {
+		rs := &ps.ResourceScores[i]
+		if override, ok := addrEscalation[rs.Address]; ok && TierWeight(override) > TierWeight(rs.Tier) {
+			rs.Tier = override
+			switch override {
+			case TierCritical:
+				if rs.Score < 85 {
+					rs.Score = 85
+				}
+			case TierHigh:
+				if rs.Score < 60 {
+					rs.Score = 60
+				}
+			case TierMedium:
+				if rs.Score < 30 {
+					rs.Score = 30
+				}
+			}
+		}
+	}
+
+	// Recalculate counts and overall
+	counts := make(map[RiskTier]int)
+	var topScore float64
+	var topTier RiskTier
+	for _, rs := range ps.ResourceScores {
+		counts[rs.Tier]++
+		if rs.Score > topScore || (rs.Score == topScore && TierWeight(rs.Tier) > TierWeight(topTier)) {
+			topScore = rs.Score
+			topTier = rs.Tier
+		}
+	}
+	ps.Counts = counts
+	ps.Overall = RiskScore{Score: topScore, Tier: topTier}
 }
