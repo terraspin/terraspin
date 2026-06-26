@@ -6,6 +6,9 @@ import (
 
 const redacted = "[SENSITIVE REDACTED]"
 
+// SensitiveRedacted is the replacement string for sensitive values.
+const SensitiveRedacted = redacted
+
 // RedactSensitive replaces all sensitive values in Before/After maps
 // with "[SENSITIVE REDACTED]" based on BeforeSensitive/AfterSensitive
 // path markers from the terraform plan JSON.

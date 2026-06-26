@@ -18,6 +18,18 @@ import (
 )
 
 func main() {
+	// Route subcommands
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "serve":
+			serveCmd(os.Args[2:])
+			return
+		case "version":
+			fmt.Println("terraspin v0.3.0")
+			return
+		}
+	}
+
 	var (
 		format      = "text"
 		failOn      = ""
@@ -155,8 +167,14 @@ func main() {
 func printUsage() {
 	fmt.Fprintf(os.Stderr, `usage: terraspin [flags] <plan.json>
        terraform plan -json | terraspin [flags]
+       terraspin serve [flags]
+       terraspin version
 
-Flags:
+Commands:
+  serve               Run as MCP server (Model Context Protocol)
+  version             Print version
+
+Flags (analyze):
   --format string      output format: text|json|markdown (default "text")
   --fail-on string     exit 1 if risk >= tier: critical|high|medium|low
   --no-ai              rule-based analysis only, skip LLM call
@@ -166,6 +184,11 @@ Flags:
   -v                   show all risk tiers including medium and low
   --config string      config file path (default ".terraspin.yml")
   --post-comment       post analysis as PR/MR comment
+
+Flags (serve):
+  --transport string   MCP transport: stdio|sse (default "stdio")
+  --port int           SSE port (default 8080)
+  --host string        SSE host (default "localhost")
 `)
 }
 
