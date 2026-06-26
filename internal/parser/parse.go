@@ -62,7 +62,6 @@ func ParsePlan(data []byte) (*PlanAST, error) {
 		Variables:        make(map[string]Variable, len(raw.Variables)),
 		Changes:          make([]ResourceChange, 0, len(raw.ResourceChanges)),
 		OutputChanges:    make(map[string]OutputChange, len(raw.OutputChanges)),
-
 	}
 
 	// Fill variables
@@ -77,13 +76,20 @@ func ParsePlan(data []byte) (*PlanAST, error) {
 		}
 
 		action := collapseActions(rc.Change.Actions)
-		before := mapify(rc.Change.Before)
-		after := mapify(rc.Change.After)
+		before, _ := rc.Change.Before.(map[string]any)
+		after, _ := rc.Change.After.(map[string]any)
 
 		// Determine module path from address
 		modulePath := moduleFromAddress(rc.Address)
 
 		forceReplace := action == ActionReplace
+
+		sensitive := false
+		if m, ok := rc.Change.AfterSensitive.(map[string]any); ok {
+			sensitive = len(m) > 0
+		}
+		beforeSensitive, _ := rc.Change.BeforeSensitive.(map[string]any)
+		afterSensitive, _ := rc.Change.AfterSensitive.(map[string]any)
 
 		ast.Changes = append(ast.Changes, ResourceChange{
 			Address:         rc.Address,
@@ -95,9 +101,9 @@ func ParsePlan(data []byte) (*PlanAST, error) {
 			ActionReason:    rc.ActionReason,
 			Before:          before,
 			After:           after,
-			BeforeSensitive: mapify(rc.Change.BeforeSensitive),
-			AfterSensitive:  mapify(rc.Change.AfterSensitive),
-			Sensitive:       sensitiveCheck(rc.Change.AfterSensitive),
+			BeforeSensitive: beforeSensitive,
+			AfterSensitive:  afterSensitive,
+			Sensitive:       sensitive,
 			ForceReplace:    forceReplace,
 		})
 	}
@@ -110,8 +116,6 @@ func ParsePlan(data []byte) (*PlanAST, error) {
 			After:   oc.After,
 		}
 	}
-
-
 
 	return ast, nil
 }
@@ -144,15 +148,7 @@ func collapseActions(actions []string) ChangeAction {
 	if len(actions) == 2 && actions[0] == "delete" && actions[1] == "create" {
 		return ActionReplace
 	}
-return ActionReplace
-}
-
-func mapify(v any) map[string]any {
-	if v == nil {
-		return nil
-	}
-	m, _ := v.(map[string]any)
-	return m
+	return ActionReplace
 }
 
 func moduleFromAddress(addr string) string {
@@ -161,14 +157,4 @@ func moduleFromAddress(addr string) string {
 	}
 	parts := strings.Split(addr, ".")
 	return strings.Join(parts[:len(parts)-2], ".")
-}
-
-// sensitiveCheck returns true if the after_sensitive map is non-empty
-// (indicating at least one attribute is marked sensitive).
-func sensitiveCheck(v any) bool {
-	m, ok := v.(map[string]any)
-	if !ok {
-		return false
-	}
-	return len(m) > 0
 }

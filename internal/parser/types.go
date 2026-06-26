@@ -36,7 +36,6 @@ type PlanAST struct {
 	Variables        map[string]Variable       `json:"variables,omitempty"`
 	Changes          []ResourceChange          `json:"changes"`
 	OutputChanges    map[string]OutputChange   `json:"output_changes,omitempty"`
-	
 }
 
 // Variable holds a plan variable value.
@@ -50,5 +49,4 @@ type OutputChange struct {
 	Before  any        `json:"before"`
 	After   any        `json:"after"`
 }
-
 
