@@ -86,17 +86,19 @@ func ParsePlan(data []byte) (*PlanAST, error) {
 		forceReplace := action == ActionReplace
 
 		ast.Changes = append(ast.Changes, ResourceChange{
-			Address:      rc.Address,
-			ModulePath:   modulePath,
-			Type:         rc.Type,
-			Name:         rc.Name,
-			ProviderName: rc.ProviderName,
-			Action:       action,
-			ActionReason: rc.ActionReason,
-			Before:       before,
-			After:        after,
-			Sensitive:    sensitiveCheck(rc.Change.AfterSensitive),
-			ForceReplace: forceReplace,
+			Address:         rc.Address,
+			ModulePath:      modulePath,
+			Type:            rc.Type,
+			Name:            rc.Name,
+			ProviderName:    rc.ProviderName,
+			Action:          action,
+			ActionReason:    rc.ActionReason,
+			Before:          before,
+			After:           after,
+			BeforeSensitive: mapify(rc.Change.BeforeSensitive),
+			AfterSensitive:  mapify(rc.Change.AfterSensitive),
+			Sensitive:       sensitiveCheck(rc.Change.AfterSensitive),
+			ForceReplace:    forceReplace,
 		})
 	}
 

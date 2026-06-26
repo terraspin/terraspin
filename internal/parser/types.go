@@ -14,17 +14,19 @@ const (
 
 // ResourceChange represents a single resource change in a terraform plan.
 type ResourceChange struct {
-	Address      string         `json:"address"`
-	ModulePath   string         `json:"module_path"`
-	Type         string         `json:"type"`
-	Name         string         `json:"name"`
-	ProviderName string         `json:"provider_name"`
-	Action       ChangeAction   `json:"action"`
-	ActionReason string         `json:"action_reason,omitempty"`
-	Before       map[string]any `json:"before"`
-	After        map[string]any `json:"after"`
-	Sensitive    bool           `json:"sensitive,omitempty"`
-	ForceReplace bool           `json:"force_replace,omitempty"`
+	Address          string         `json:"address"`
+	ModulePath       string         `json:"module_path"`
+	Type             string         `json:"type"`
+	Name             string         `json:"name"`
+	ProviderName     string         `json:"provider_name"`
+	Action           ChangeAction   `json:"action"`
+	ActionReason     string         `json:"action_reason,omitempty"`
+	Before           map[string]any `json:"before"`
+	After            map[string]any `json:"after"`
+	BeforeSensitive  map[string]any `json:"before_sensitive,omitempty"`
+	AfterSensitive   map[string]any `json:"after_sensitive,omitempty"`
+	Sensitive        bool           `json:"sensitive,omitempty"`
+	ForceReplace     bool           `json:"force_replace,omitempty"`
 }
 
 // PlanAST is the internal representation of a terraform plan JSON.
