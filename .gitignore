@@ -1,1 +1,39 @@
-PRD.md
+# Go
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+go.work
+go.work.sum
+/go.work
+
+# Build output
+dist/
+bin/
+/tmp/
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Nix
+result
+result-*
+
+# direnv
+.envrc
+.direnv/
+
+# Terraspin
+*.tfplan
+plan.json
+*.tfstate
+*.tfstate.backup
+.terraform.lock.hcl
+.terraform/
