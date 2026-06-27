@@ -24,6 +24,9 @@ func main() {
 		case "serve":
 			serveCmd(os.Args[2:])
 			return
+		case "diff":
+			diffCmd(os.Args[2:])
+			return
 		case "version":
 			fmt.Println("terraspin v0.3.0")
 			return
@@ -171,6 +174,7 @@ func printUsage() {
        terraspin version
 
 Commands:
+  diff                Compare two terraform plan outputs
   serve               Run as MCP server (Model Context Protocol)
   version             Print version
 

@@ -44,15 +44,15 @@ func TestScorePlan_forceDestroy(t *testing.T) {
 	ast := &parser.PlanAST{
 		Changes: []parser.ResourceChange{
 			{
-				Address:      "aws_s3_bucket.data",
-				Type:         "aws_s3_bucket",
-				Action:       parser.ActionUpdate,
-				ForceReplace: true,
+				Address: "aws_s3_bucket.data",
+				Type:    "aws_s3_bucket",
+				Action:  parser.ActionUpdate,
+				After:   map[string]any{"force_destroy": true},
 			},
 		},
 	}
 	ps := ScorePlan(ast)
-	// update with force_destroy → 2.5× not 1.8×
+	// update with force_destroy=true → 2.5× not 1.8×
 	if ps.ResourceScores[0].Score != 50 {
 		t.Errorf("score = %.1f, want 50.0", ps.ResourceScores[0].Score)
 	}
