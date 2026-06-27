@@ -145,7 +145,7 @@ func QueryOllama(ctx context.Context, host, model, prompt string) (string, int, 
 func QueryLLM(ctx context.Context, provider, apiKey, model, host, prompt string) (string, int, error) {
 	switch provider {
 	case "claude":
-		return QueryClaude(ctx, apiKey, prompt)
+		return QueryClaude(ctx, apiKey, model, prompt)
 	case "openai":
 		return QueryOpenAI(ctx, apiKey, model, prompt)
 	case "ollama":

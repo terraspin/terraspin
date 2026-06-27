@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
 )
 
 var anthropicAPI = "https://api.anthropic.com/v1/messages"
@@ -53,10 +54,27 @@ type claudeError struct {
 
 // QueryClaude sends a prompt to the Anthropic Claude API using the
 // Messages API and returns the raw text response along with total token count.
+// model defaults to CLAUDE_MODEL env var, then "claude-sonnet-4-20250514".
+// apiKey falls back to ANTHROPIC_API_KEY env var when empty.
+// Endpoint URL falls back to ANTHROPIC_BASE_URL env var, then the default.
 // The caller should wrap ctx with a timeout: context.WithTimeout(ctx, 30*time.Second).
-func QueryClaude(ctx context.Context, apiKey, prompt string) (string, int, error) {
+func QueryClaude(ctx context.Context, apiKey, model, prompt string) (string, int, error) {
+	if apiKey == "" {
+		apiKey = os.Getenv("ANTHROPIC_API_KEY")
+	}
+	if model == "" {
+		model = os.Getenv("CLAUDE_MODEL")
+		if model == "" {
+			model = "claude-sonnet-4-20250514"
+		}
+	}
+	endpoint := anthropicAPI
+	if v := os.Getenv("ANTHROPIC_BASE_URL"); v != "" {
+		endpoint = v
+	}
+
 	body := claudeRequest{
-		Model:     "claude-sonnet-4-20250514",
+		Model:     model,
 		MaxTokens: 1024,
 		System:    SystemPrompt,
 		Messages:  []claudeMessage{{Role: "user", Content: prompt}},
@@ -67,7 +85,7 @@ func QueryClaude(ctx context.Context, apiKey, prompt string) (string, int, error
 		return "", 0, fmt.Errorf("claude: marshal request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, anthropicAPI, bytes.NewReader(raw))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(raw))
 	if err != nil {
 		return "", 0, fmt.Errorf("claude: create request: %w", err)
 	}

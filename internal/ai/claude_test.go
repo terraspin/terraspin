@@ -29,7 +29,7 @@ func TestQueryClaude_success(t *testing.T) {
 		})
 	})()
 
-	got, err := QueryClaude(context.Background(), "test-key", "analyze this plan")
+	got, err := QueryClaude(context.Background(), "test-key", "", "analyze this plan")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -45,7 +45,7 @@ func TestQueryClaude_httpError(t *testing.T) {
 		json.NewEncoder(w).Encode(claudeError{Message: "invalid API key"})
 	})()
 
-	_, err := QueryClaude(context.Background(), "bad-key", "prompt")
+	_, err := QueryClaude(context.Background(), "bad-key", "", "prompt")
 	if err == nil {
 		t.Fatal("expected error")
 	}
@@ -59,7 +59,7 @@ func TestQueryClaude_timeout(t *testing.T) {
 	ctx, cancel := context.WithTimeout(context.Background(), 1*time.Millisecond)
 	defer cancel()
 
-	_, err := QueryClaude(ctx, "key", "prompt")
+	_, err := QueryClaude(ctx, "key", "", "prompt")
 	if err == nil {
 		t.Fatal("expected timeout error")
 	}
