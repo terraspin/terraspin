@@ -1,0 +1,322 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.7.2",
+  "variables": {},
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_instance.gateway",
+          "mode": "managed",
+          "type": "aws_instance",
+          "name": "gateway",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "schema_version": 1,
+          "values": {
+            "ami": "ami-0c55b159cbfafe1f0",
+            "instance_type": "t3.nano"
+          },
+          "sensitive_values": {}
+        }
+      ],
+      "child_modules": [
+        {
+          "address": "module.database",
+          "resources": [
+            {
+              "address": "module.database.aws_db_instance.primary",
+              "mode": "managed",
+              "type": "aws_db_instance",
+              "name": "primary",
+              "provider_name": "registry.terraform.io/hashicorp/aws",
+              "schema_version": 1,
+              "values": {
+                "engine": "postgres",
+                "engine_version": "16.3",
+                "instance_class": "db.r6g.large",
+                "storage_encrypted": true
+              },
+              "sensitive_values": {
+                "password": true
+              }
+            },
+            {
+              "address": "module.database.aws_db_subnet_group.main",
+              "mode": "managed",
+              "type": "aws_db_subnet_group",
+              "name": "main",
+              "provider_name": "registry.terraform.io/hashicorp/aws",
+              "schema_version": 0,
+              "values": {
+                "name": "db-subnet-group"
+              },
+              "sensitive_values": {}
+            },
+            {
+              "address": "module.database.aws_security_group.db",
+              "mode": "managed",
+              "type": "aws_security_group",
+              "name": "db",
+              "provider_name": "registry.terraform.io/hashicorp/aws",
+              "schema_version": 1,
+              "values": {
+                "name": "db-sg",
+                "description": "Database security group",
+                "ingress": [
+                  {
+                    "from_port": 5432,
+                    "to_port": 5432,
+                    "protocol": "tcp",
+                    "cidr_blocks": ["10.0.0.0/8"],
+                    "description": "VPC internal"
+                  }
+                ]
+              },
+              "sensitive_values": {}
+            }
+          ]
+        },
+        {
+          "address": "module.network",
+          "resources": [
+            {
+              "address": "module.network.aws_vpc.main",
+              "mode": "managed",
+              "type": "aws_vpc",
+              "name": "main",
+              "provider_name": "registry.terraform.io/hashicorp/aws",
+              "schema_version": 1,
+              "values": {
+                "cidr_block": "10.0.0.0/16",
+                "enable_dns_support": true,
+                "enable_dns_hostnames": true
+              },
+              "sensitive_values": {}
+            },
+            {
+              "address": "module.network.aws_subnet.private",
+              "mode": "managed",
+              "type": "aws_subnet",
+              "name": "private",
+              "provider_name": "registry.terraform.io/hashicorp/aws",
+              "schema_version": 1,
+              "values": {
+                "cidr_block": "10.0.1.0/24",
+                "vpc_id": "vpc-12345",
+                "availability_zone": "us-east-1a"
+              },
+              "sensitive_values": {}
+            }
+          ]
+        },
+        {
+          "address": "module.database.module.replica",
+          "resources": [
+            {
+              "address": "module.database.module.replica.aws_db_instance.replica1",
+              "mode": "managed",
+              "type": "aws_db_instance",
+              "name": "replica1",
+              "provider_name": "registry.terraform.io/hashicorp/aws",
+              "schema_version": 1,
+              "values": {
+                "engine": "postgres",
+                "engine_version": "16.3",
+                "instance_class": "db.r6g.large",
+                "storage_encrypted": true
+              },
+              "sensitive_values": {
+                "password": true
+              }
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "aws_instance.gateway",
+      "module_address": "",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "gateway",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "ami": "ami-0c55b159cbfafe1f0",
+          "instance_type": "t3.micro"
+        },
+        "after": {
+          "ami": "ami-0c55b159cbfafe1f0",
+          "instance_type": "t3.nano"
+        },
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {}
+      },
+      "action_reason": ""
+    },
+    {
+      "address": "module.database.aws_db_instance.primary",
+      "module_address": "module.database",
+      "mode": "managed",
+      "type": "aws_db_instance",
+      "name": "primary",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["delete", "create"],
+        "before": {
+          "engine": "postgres",
+          "engine_version": "16.1",
+          "instance_class": "db.r6g.large",
+          "skip_final_snapshot": false
+        },
+        "after": {
+          "engine": "postgres",
+          "engine_version": "16.3",
+          "instance_class": "db.r6g.xlarge",
+          "skip_final_snapshot": true
+        },
+        "after_unknown": {},
+        "before_sensitive": {
+          "password": true
+        },
+        "after_sensitive": {
+          "password": true
+        }
+      },
+      "action_reason": "changes to instance_class require replacement"
+    },
+    {
+      "address": "module.database.aws_db_subnet_group.main",
+      "module_address": "module.database",
+      "mode": "managed",
+      "type": "aws_db_subnet_group",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["no-op"],
+        "before": {
+          "name": "db-subnet-group"
+        },
+        "after": {
+          "name": "db-subnet-group"
+        },
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {}
+      },
+      "action_reason": ""
+    },
+    {
+      "address": "module.database.aws_security_group.db",
+      "module_address": "module.database",
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "db",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["delete"],
+        "before": {
+          "name": "db-sg",
+          "description": "Database security group"
+        },
+        "after": null,
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {}
+      },
+      "action_reason": ""
+    },
+    {
+      "address": "module.network.aws_vpc.main",
+      "module_address": "module.network",
+      "mode": "managed",
+      "type": "aws_vpc",
+      "name": "main",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["delete"],
+        "before": {
+          "cidr_block": "10.0.0.0/16",
+          "enable_dns_support": true,
+          "enable_dns_hostnames": true
+        },
+        "after": null,
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {}
+      },
+      "action_reason": ""
+    },
+    {
+      "address": "module.network.aws_subnet.private",
+      "module_address": "module.network",
+      "mode": "managed",
+      "type": "aws_subnet",
+      "name": "private",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "cidr_block": "10.0.1.0/24",
+          "vpc_id": "vpc-12345",
+          "availability_zone": "us-east-1a"
+        },
+        "after_unknown": {
+          "id": true,
+          "arn": true
+        },
+        "before_sensitive": false,
+        "after_sensitive": {}
+      },
+      "action_reason": ""
+    },
+    {
+      "address": "module.database.module.replica.aws_db_instance.replica1",
+      "module_address": "module.database.module.replica",
+      "mode": "managed",
+      "type": "aws_db_instance",
+      "name": "replica1",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "engine": "postgres",
+          "engine_version": "16.1",
+          "instance_class": "db.r6g.large",
+          "storage_encrypted": true
+        },
+        "after": {
+          "engine": "postgres",
+          "engine_version": "16.3",
+          "instance_class": "db.r6g.large",
+          "storage_encrypted": true
+        },
+        "after_unknown": {},
+        "before_sensitive": {
+          "password": true
+        },
+        "after_sensitive": {
+          "password": true
+        }
+      },
+      "action_reason": ""
+    }
+  ],
+  "output_changes": {},
+  "configuration": {
+    "provider_config": {
+      "aws": {
+        "name": "aws"
+      }
+    }
+  },
+  "relevant_attributes": [],
+  "applyable": true,
+  "complete": true,
+  "errored": false
+}

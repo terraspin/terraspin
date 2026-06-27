@@ -104,6 +104,8 @@ func getNestedValue(data map[string]any, path string) any {
 		}
 		data = sub
 	}
+	// ponytail: returns nil if path terminates at a nested map (not a leaf).
+	// Rule attribute paths should always point to leaf values (bool, string, number).
 	return nil
 }
 

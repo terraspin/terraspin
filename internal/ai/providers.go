@@ -44,7 +44,10 @@ func QueryOpenAI(ctx context.Context, apiKey, model, prompt string) (string, int
 	body := openAIRequest{
 		Model:     model,
 		MaxTokens: 2048,
-		Messages:  []openAIMessage{{Role: "user", Content: prompt}},
+		Messages: []openAIMessage{
+			{Role: "system", Content: SystemPrompt},
+			{Role: "user", Content: prompt},
+		},
 	}
 	raw, _ := json.Marshal(body)
 
@@ -142,11 +145,7 @@ func QueryOllama(ctx context.Context, host, model, prompt string) (string, int, 
 func QueryLLM(ctx context.Context, provider, apiKey, model, host, prompt string) (string, int, error) {
 	switch provider {
 	case "claude":
-		text, err := QueryClaude(ctx, apiKey, prompt)
-		if err != nil {
-			return "", 0, err
-		}
-		return text, 0, nil
+		return QueryClaude(ctx, apiKey, prompt)
 	case "openai":
 		return QueryOpenAI(ctx, apiKey, model, prompt)
 	case "ollama":
@@ -183,21 +182,14 @@ type PlanChangeSummary struct {
 }
 
 // BuildAnalysisPrompt creates a compact prompt for the LLM from plan data.
-// ponytail: minimal prompt, instructs JSON output for easy parsing.
+// ponytail: structured prompt with exact JSON schema to maximise parse rate.
 func BuildAnalysisPrompt(changes []PlanChangeSummary, riskTier string, riskScore float64, counts map[string]int) string {
 	var b strings.Builder
-	b.WriteString("You are Terraspin, a Terraform plan analysis assistant. ")
-	b.WriteString("Analyze the following infrastructure plan changes and output a JSON object with these keys:\n")
-	b.WriteString("- summary: 2-3 sentence plain-English summary\n")
-	b.WriteString("- critical_changes: array of strings, one per critical/high risk change\n")
-	b.WriteString("- risk_assessment: 1-2 sentence assessment\n")
-	b.WriteString("- recommendations: array of actionable check strings\n")
-	b.WriteString("- rollback_strategy: step-by-step recovery plan\n\n")
 
-	b.WriteString(fmt.Sprintf("Overall risk: %s (score: %.0f)\n", riskTier, riskScore))
-	b.WriteString(fmt.Sprintf("Resource counts by tier: %v\n\n", counts))
-	b.WriteString("Changes:\n")
-
+	b.WriteString(fmt.Sprintf("Overall plan risk: %s (score: %.0f)\n", riskTier, riskScore))
+	b.WriteString(fmt.Sprintf("Resource counts by tier: critical=%d high=%d medium=%d low=%d\n\n",
+		counts["critical"], counts["high"], counts["medium"], counts["low"]))
+	b.WriteString("Changed resources:\n")
 	for _, c := range changes {
 		b.WriteString(fmt.Sprintf("- %s [%s] → %s", c.Address, c.Tier, strings.ToUpper(string(c.Action))))
 		if c.BlastDesc != "" {
@@ -205,8 +197,15 @@ func BuildAnalysisPrompt(changes []PlanChangeSummary, riskTier string, riskScore
 		}
 		b.WriteString("\n")
 	}
-
-	b.WriteString("\nOutput ONLY valid JSON, no markdown fences, no commentary.")
+	b.WriteString(`
+Analyze this plan and return ONLY valid JSON with these exact keys:
+{
+  "summary": "2-3 sentence plain-English summary for a non-technical manager",
+  "critical_changes": ["one string per critical/high change explaining business impact"],
+  "risk_assessment": "1-2 sentences on why this plan is risky or safe",
+  "recommendations": ["specific actionable check before applying — not 'review changes'"],
+  "rollback_strategy": "numbered steps to recover if apply fails — specific commands where possible"
+}`)
 	return b.String()
 }
 

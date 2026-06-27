@@ -1,0 +1,149 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.7.2",
+  "variables": {},
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_iam_access_key.deployer",
+          "mode": "managed",
+          "type": "aws_iam_access_key",
+          "name": "deployer",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "schema_version": 0,
+          "values": {
+            "user": "deployer-bot"
+          },
+          "sensitive_values": {
+            "secret": true,
+            "ses_smtp_password_v4": true
+          }
+        },
+        {
+          "address": "aws_s3_bucket.data",
+          "mode": "managed",
+          "type": "aws_s3_bucket",
+          "name": "data",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "schema_version": 0,
+          "values": {
+            "bucket": "my-data-bucket",
+            "force_destroy": true
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_db_instance.replica",
+          "mode": "managed",
+          "type": "aws_db_instance",
+          "name": "replica",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "schema_version": 1,
+          "values": {
+            "engine": "postgres",
+            "engine_version": "16.3"
+          },
+          "sensitive_values": {
+            "password": true,
+            "master_user_secret": true
+          }
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "aws_iam_access_key.deployer",
+      "module_address": "",
+      "mode": "managed",
+      "type": "aws_iam_access_key",
+      "name": "deployer",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "user": "deployer-bot",
+          "secret": "plaintext-secret-key-here"
+        },
+        "after_unknown": {
+          "id": true,
+          "secret": true,
+          "ses_smtp_password_v4": true
+        },
+        "before_sensitive": false,
+        "after_sensitive": {
+          "secret": true,
+          "ses_smtp_password_v4": true
+        }
+      },
+      "action_reason": ""
+    },
+    {
+      "address": "aws_s3_bucket.data",
+      "module_address": "",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "data",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["delete"],
+        "before": {
+          "bucket": "my-data-bucket",
+          "force_destroy": true
+        },
+        "after": null,
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {}
+      },
+      "action_reason": ""
+    },
+    {
+      "address": "aws_db_instance.replica",
+      "module_address": "",
+      "mode": "managed",
+      "type": "aws_db_instance",
+      "name": "replica",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "engine": "postgres",
+          "engine_version": "16.3",
+          "password": "old-password-value",
+          "master_user_secret": "arn:aws:secretsmanager:us-east-1:123456789012:secret:rds!db-abc123"
+        },
+        "after": {
+          "engine": "postgres",
+          "engine_version": "17.0",
+          "password": "new-password-value",
+          "master_user_secret": "arn:aws:secretsmanager:us-east-1:123456789012:secret:rds!db-def456"
+        },
+        "after_unknown": {},
+        "before_sensitive": {
+          "password": true,
+          "master_user_secret": true
+        },
+        "after_sensitive": {
+          "password": true,
+          "master_user_secret": true
+        }
+      },
+      "action_reason": ""
+    }
+  ],
+  "output_changes": {},
+  "configuration": {
+    "provider_config": {
+      "aws": {
+        "name": "aws"
+      }
+    }
+  },
+  "relevant_attributes": [],
+  "applyable": true,
+  "complete": true,
+  "errored": false
+}

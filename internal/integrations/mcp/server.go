@@ -16,6 +16,7 @@ import (
 	"github.com/mark3labs/mcp-go/mcp"
 	"github.com/terraspin/terraspin/internal/ai"
 	"github.com/terraspin/terraspin/internal/analyzer"
+	"github.com/terraspin/terraspin/internal/config"
 	"github.com/terraspin/terraspin/internal/parser"
 )
 
@@ -61,6 +62,20 @@ func planFromArgs(args map[string]any) (*parser.PlanAST, *analyzer.PlanScore, ma
 
 	ai.RedactSensitive(ast)
 	score := analyzer.ScorePlan(ast)
+
+	// Attempt to load custom rules from cwd and apply them
+	cfg, cfgErr := config.Load(".terraspin.yml")
+	if cfgErr == nil && cfg != nil && len(cfg.Rules) > 0 {
+		ruleMatches := config.EvaluateRules(cfg, ast)
+		crMatches := make([]analyzer.ConfigRuleMatch, 0, len(ruleMatches))
+		for _, m := range ruleMatches {
+			crMatches = append(crMatches, analyzer.ConfigRuleMatch{
+				Address:  m.Address,
+				Severity: m.Severity,
+			})
+		}
+		analyzer.ApplyCustomRules(score, crMatches)
+	}
 
 	refs := analyzer.ParseDependencyRefs([]byte(planJSON))
 	blast := analyzer.AnalyzeBlastRadius(ast.Changes, refs)

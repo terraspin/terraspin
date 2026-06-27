@@ -148,8 +148,14 @@ func ScorePlan(ast *parser.PlanAST) *PlanScore {
 		}
 		mult := resourceMultiplier(rc.Type)
 		// ponytail: aws_s3_bucket with force_destroy=true → 2.5× not 1.8×
-		if rc.Type == "aws_s3_bucket" && rc.ForceReplace {
-			mult = 2.5
+		if rc.Type == "aws_s3_bucket" {
+			fd := rc.After["force_destroy"]
+			if fd == nil {
+				fd = rc.Before["force_destroy"]
+			}
+			if b, ok := fd.(bool); ok && b {
+				mult = 2.5
+			}
 		}
 		score := math.Min(100, base*mult)
 		s := ResourceRiskScore{
