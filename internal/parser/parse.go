@@ -16,7 +16,7 @@ type terraformPlanJSON struct {
 	} `json:"variables,omitempty"`
 	ResourceChanges []terraformResourceChange `json:"resource_changes,omitempty"`
 	OutputChanges   map[string]terraformOutputChange `json:"output_changes,omitempty"`
-	Configuration   *terraformConfiguration  `json:"configuration,omitempty"`
+
 }
 
 type terraformResourceChange struct {
@@ -40,10 +40,6 @@ type terraformOutputChange struct {
 	Actions []string `json:"actions"`
 	Before  any      `json:"before"`
 	After   any      `json:"after"`
-}
-
-type terraformConfiguration struct {
-	ProviderConfig map[string]any `json:"provider_config,omitempty"`
 }
 
 // ParsePlan parses a raw terraform show -json byte slice into a PlanAST.

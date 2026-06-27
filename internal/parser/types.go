@@ -39,6 +39,19 @@ type PlanAST struct {
 	OutputChanges    map[string]OutputChange   `json:"output_changes,omitempty"`
 }
 
+// CountByAction returns resource change counts by action type.
+func (a *PlanAST) CountByAction() map[string]int {
+	out := map[string]int{"create": 0, "update": 0, "delete": 0, "replace": 0}
+	for _, c := range a.Changes {
+		key := string(c.Action)
+		if c.Action == ActionReplace {
+			key = "replace"
+		}
+		out[key]++
+	}
+	return out
+}
+
 // Variable holds a plan variable value.
 type Variable struct {
 	Value any `json:"value"`

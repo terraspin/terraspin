@@ -2,6 +2,8 @@ package diff
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/terraspin/terraspin/internal/parser"
@@ -115,20 +117,14 @@ func collectAddrs(idxA, idxB map[string]parser.ResourceChange) []string {
 	for addr := range idxB {
 		seen[addr] = struct{}{}
 	}
-	addrs := make([]string, 0, len(seen))
-	for addr := range seen {
-		addrs = append(addrs, addr)
-	}
-	sortStrings(addrs)
-	return addrs
+	return slices.Sorted(maps.Keys(seen))
 }
 
 // diffAttrs compares two maps and returns a list of changed paths.
 // prefix is used for nested keys (e.g. "tags.Name").
 func diffAttrs(a, b map[string]any, prefix string) []AttributeDiff {
 	var changes []AttributeDiff
-	keys := collectKeys(a, b)
-	for _, k := range sortStrings(keys) {
+	for _, k := range collectKeys(a, b) {
 		path := k
 		if prefix != "" {
 			path = prefix + "." + k
@@ -217,16 +213,7 @@ func dedupChanges(changes []AttributeDiff) []AttributeDiff {
 	return out
 }
 
-// ponytail: minimal sort, no dependency on sort package for string slices.
-func sortStrings(s []string) []string {
-	// simple insertion sort for small slices
-	for i := 1; i < len(s); i++ {
-		for j := i; j > 0 && s[j-1] > s[j]; j-- {
-			s[j], s[j-1] = s[j-1], s[j]
-		}
-	}
-	return s
-}
+
 
 // DiffSummaryText returns a one-line summary string for the diff.
 func (r *DiffResult) DiffSummaryText() string {

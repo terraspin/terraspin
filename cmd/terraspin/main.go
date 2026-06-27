@@ -112,11 +112,7 @@ func main() {
 
 	// Apply custom rules from config
 	ruleMatches := config.EvaluateRules(cfg, ast)
-	crMatches := make([]analyzer.ConfigRuleMatch, 0, len(ruleMatches))
-	for _, m := range ruleMatches {
-		crMatches = append(crMatches, analyzer.ConfigRuleMatch{Address: m.Address, Severity: m.Severity})
-	}
-	analyzer.ApplyCustomRules(score, crMatches)
+	analyzer.ApplyCustomRules(score, ruleMatches)
 
 	// Analyze blast radius
 	refs := analyzer.ParseDependencyRefs(data)

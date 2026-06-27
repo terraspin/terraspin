@@ -25,23 +25,12 @@ func FormatText(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[string
 	fmt.Fprintf(&b, "└────────────────────────────────────────────────────────────┘\n\n")
 
 	// Overall risk
-	fmt.Fprintf(&b, "  Overall Risk  %s (score: %.0f)\n\n", tierBadge(string(score.Overall.Tier)), score.Overall.Score)
+	fmt.Fprintf(&b, "  Overall Risk  %s (score: %.0f)\n\n", strings.ToUpper(string(score.Overall.Tier)), score.Overall.Score)
 
 	// Counts by action
-	var creates, updates, deletes, replaces int
-	for _, c := range ast.Changes {
-		switch c.Action {
-		case parser.ActionCreate:
-			creates++
-		case parser.ActionUpdate:
-			updates++
-		case parser.ActionDelete:
-			deletes++
-		case parser.ActionReplace:
-			replaces++
-		}
-	}
-	fmt.Fprintf(&b, "  %d to create  ·  %d to update  ·  %d to delete  ·  %d to replace\n\n", creates, updates, deletes, replaces)
+	counts := ast.CountByAction()
+	fmt.Fprintf(&b, "  %d to create  ·  %d to update  ·  %d to delete  ·  %d to replace\n\n",
+		counts["create"], counts["update"], counts["delete"], counts["replace"])
 
 	// Critical/high changes
 	hasCritical := false
@@ -51,7 +40,7 @@ func FormatText(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[string
 				fmt.Fprintf(&b, "──── Critical & High Risk Changes ────────────────────────────\n\n")
 				hasCritical = true
 			}
-			fmt.Fprintf(&b, "  [%s %5.1f]  %s  →  %s\n", tierBadge(string(rs.Tier)), rs.Score, rs.Address, strings.ToUpper(string(rs.Action)))
+			fmt.Fprintf(&b, "  [%s %5.1f]  %s  →  %s\n", strings.ToUpper(string(rs.Tier)), rs.Score, rs.Address, strings.ToUpper(string(rs.Action)))
 			if br, ok := blast[rs.Address]; ok && br.TotalAffected > 0 {
 				fmt.Fprintf(&b, "  Blast radius: %d resources affected\n", br.TotalAffected)
 				for _, d := range br.DirectDeps {
@@ -101,9 +90,7 @@ func FormatText(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[string
 	return b.String()
 }
 
-func tierBadge(tier string) string {
-	return strings.ToUpper(tier)
-}
+
 
 // ---------------------------------------------------------------------------
 // JSON format
@@ -120,7 +107,7 @@ func FormatJSON(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[string
 		Narrative        *ai.Narrative              `json:"narrative,omitempty"`
 	}{
 		TerraformVersion: ast.TerraformVersion,
-		ResourceCounts:   countByAction(ast.Changes),
+		ResourceCounts:   ast.CountByAction(),
 		OverallRisk:      score.Overall,
 		ResourceRisks:    score.ResourceScores,
 		BlastRadii:       blast,
@@ -146,7 +133,7 @@ func FormatMarkdown(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[st
 	fmt.Fprintf(&b, "**Terraform:** %s  ·  **Risk:** %s (%.0f)\n\n",
 		ast.TerraformVersion, string(score.Overall.Tier), score.Overall.Score)
 
-	counts := countByAction(ast.Changes)
+	counts := ast.CountByAction()
 	fmt.Fprintf(&b, "| Action | Count |\n|--------|-------|\n")
 	for _, action := range []string{"create", "update", "delete", "replace"} {
 		if c := counts[action]; c > 0 {
@@ -192,14 +179,4 @@ func FormatMarkdown(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[st
 // Helpers
 // ---------------------------------------------------------------------------
 
-func countByAction(changes []parser.ResourceChange) map[string]int {
-	out := map[string]int{"create": 0, "update": 0, "delete": 0, "replace": 0}
-	for _, c := range changes {
-		key := string(c.Action)
-		if c.Action == parser.ActionReplace {
-			key = "replace"
-		}
-		out[key]++
-	}
-	return out
-}
+

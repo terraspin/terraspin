@@ -4,6 +4,7 @@ import (
 	"math"
 	"strings"
 
+	"github.com/terraspin/terraspin/internal/config"
 	"github.com/terraspin/terraspin/internal/parser"
 )
 
@@ -177,15 +178,9 @@ func ScorePlan(ast *parser.PlanAST) *PlanScore {
 	}
 }
 
-// ConfigRuleMatch is a minimal match result from custom rules.
-type ConfigRuleMatch struct {
-	Address  string
-	Severity string
-}
-
 // ApplyCustomRules escalates resource tiers where a matched rule severity exceeds
 // the computed risk tier. Modifies ps in-place.
-func ApplyCustomRules(ps *PlanScore, ruleMatches []ConfigRuleMatch) {
+func ApplyCustomRules(ps *PlanScore, ruleMatches []config.RuleMatchResult) {
 	if len(ruleMatches) == 0 {
 		return
 	}

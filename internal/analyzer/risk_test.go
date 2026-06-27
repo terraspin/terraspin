@@ -3,6 +3,7 @@ package analyzer
 import (
 	"testing"
 
+	"github.com/terraspin/terraspin/internal/config"
 	"github.com/terraspin/terraspin/internal/parser"
 )
 
@@ -112,7 +113,7 @@ func TestApplyCustomRules_escalates(t *testing.T) {
 		Overall: RiskScore{Score: 40, Tier: TierMedium},
 		Counts:  map[RiskTier]int{TierLow: 1, TierMedium: 1},
 	}
-	matches := []ConfigRuleMatch{
+	matches := []config.RuleMatchResult{
 		{Address: "aws_s3_bucket.logs", Severity: "critical"},
 	}
 	ApplyCustomRules(ps, matches)
@@ -140,7 +141,7 @@ func TestApplyCustomRules_noDowngrade(t *testing.T) {
 		Counts:  map[RiskTier]int{TierCritical: 1},
 	}
 	// Rule says "low" — should not downgrade
-	matches := []ConfigRuleMatch{
+	matches := []config.RuleMatchResult{
 		{Address: "critical-resource", Severity: "low"},
 	}
 	ApplyCustomRules(ps, matches)
@@ -157,7 +158,7 @@ func TestApplyCustomRules_highestSeverityWins(t *testing.T) {
 		Overall: RiskScore{Score: 10, Tier: TierLow},
 		Counts:  map[RiskTier]int{TierLow: 1},
 	}
-	matches := []ConfigRuleMatch{
+	matches := []config.RuleMatchResult{
 		{Address: "x", Severity: "high"},
 		{Address: "x", Severity: "critical"},
 	}

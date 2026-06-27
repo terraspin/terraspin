@@ -67,14 +67,7 @@ func planFromArgs(args map[string]any) (*parser.PlanAST, *analyzer.PlanScore, ma
 	cfg, cfgErr := config.Load(".terraspin.yml")
 	if cfgErr == nil && cfg != nil && len(cfg.Rules) > 0 {
 		ruleMatches := config.EvaluateRules(cfg, ast)
-		crMatches := make([]analyzer.ConfigRuleMatch, 0, len(ruleMatches))
-		for _, m := range ruleMatches {
-			crMatches = append(crMatches, analyzer.ConfigRuleMatch{
-				Address:  m.Address,
-				Severity: m.Severity,
-			})
-		}
-		analyzer.ApplyCustomRules(score, crMatches)
+		analyzer.ApplyCustomRules(score, ruleMatches)
 	}
 
 	refs := analyzer.ParseDependencyRefs([]byte(planJSON))
@@ -134,20 +127,9 @@ func handleAnalyzePlan(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	b.WriteString(fmt.Sprintf("**Terraform:** %s\n\n", ast.TerraformVersion))
 
 	// Resource counts
-	var creates, updates, deletes, replaces int
-	for _, c := range ast.Changes {
-		switch c.Action {
-		case parser.ActionCreate:
-			creates++
-		case parser.ActionUpdate:
-			updates++
-		case parser.ActionDelete:
-			deletes++
-		case parser.ActionReplace:
-			replaces++
-		}
-	}
-	b.WriteString(fmt.Sprintf("**Changes:** %d create, %d update, %d delete, %d replace\n\n", creates, updates, deletes, replaces))
+	counts := ast.CountByAction()
+	b.WriteString(fmt.Sprintf("**Changes:** %d create, %d update, %d delete, %d replace\n\n",
+		counts["create"], counts["update"], counts["delete"], counts["replace"]))
 
 	// Tier counts
 	b.WriteString(fmt.Sprintf("**Risk breakdown:** critical=%d, high=%d, medium=%d, low=%d\n\n",
