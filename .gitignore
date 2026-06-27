@@ -31,6 +31,8 @@ result-*
 .direnv/
 
 # Terraspin
+PRD.md
+graphify-out/
 *.tfplan
 plan.json
 *.tfstate
