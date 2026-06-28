@@ -52,7 +52,7 @@ changelog:
 
 brews:
   - name: terraspin
-    tap:
+    repository:
       owner: terraspin
       name: homebrew-tap
       branch: main
