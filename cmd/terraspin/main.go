@@ -6,6 +6,8 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
+	"runtime/debug"
 	"strings"
 	"time"
 
@@ -16,6 +18,25 @@ import (
 	"github.com/terraspin/terraspin/internal/integrations"
 	"github.com/terraspin/terraspin/internal/parser"
 )
+
+// Build metadata — set via ldflags at release time.
+var (
+	version = "dev"
+	commit  = "unknown"
+	date    = "unknown"
+)
+
+func versionString() string {
+	v := fmt.Sprintf("terraspin %s", version)
+	if version == "dev" {
+		if info, ok := debug.ReadBuildInfo(); ok {
+			v += fmt.Sprintf(" (%s)", info.Main.Version)
+		}
+	} else {
+		v += fmt.Sprintf(" commit=%s built=%s go=%s", commit, date, runtime.Version())
+	}
+	return v
+}
 
 func main() {
 	// Route subcommands
@@ -28,7 +49,7 @@ func main() {
 			diffCmd(os.Args[2:])
 			return
 		case "version":
-			fmt.Println("terraspin v0.3.0")
+			fmt.Println(versionString())
 			return
 		}
 	}
@@ -193,17 +214,126 @@ Flags (serve):
 }
 
 func buildRuleNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[string]*analyzer.BlastRadius) *ai.Narrative {
+	// Critical/high changes
 	var criticalChanges []string
+	var criticalFindings []string
 	var recs []string
 	for _, rs := range score.ResourceScores {
 		if rs.Tier == analyzer.TierCritical || rs.Tier == analyzer.TierHigh {
-			criticalChanges = append(criticalChanges, fmt.Sprintf("%s → %s (score: %.1f)", rs.Address, rs.Action, rs.Score))
+			desc := fmt.Sprintf("%s → %s (score: %.1f)", rs.Address, rs.Action, rs.Score)
+			criticalChanges = append(criticalChanges, desc)
 			if br, ok := blast[rs.Address]; ok && br.TotalAffected > 0 {
-				recs = append(recs, fmt.Sprintf("Review blast radius of %s (%d resources affected)", rs.Address, br.TotalAffected))
+				finding := fmt.Sprintf("[%s] %s → %s: Blast radius of %d dependent resources", strings.ToUpper(string(rs.Tier)), rs.Address, strings.ToUpper(string(rs.Action)), br.TotalAffected)
+				for _, d := range br.DirectDeps {
+					finding += fmt.Sprintf(" (incl. %s", d.Address)
+				}
+				if len(br.DirectDeps) > 0 {
+					finding += ")"
+				}
+				criticalFindings = append(criticalFindings, finding)
+				recs = append(recs, fmt.Sprintf("Verify %s is backed up and can be restored before applying — blast radius: %d resources", rs.Address, br.TotalAffected))
+			} else {
+				criticalFindings = append(criticalFindings, fmt.Sprintf("[%s] %s → %s: No direct blast radius detected, but review dependent resources manually", strings.ToUpper(string(rs.Tier)), rs.Address, strings.ToUpper(string(rs.Action))))
+				recs = append(recs, fmt.Sprintf("Review %s before applying", rs.Address))
 			}
 		}
 	}
-	return ai.BuildRuleBasedNarrative(string(score.Overall.Tier), score.Overall.Score, criticalChanges, recs)
+
+	// Infrastructure summary by category
+	infraByCategory := map[string]int{}
+	for _, rc := range ast.Changes {
+		if rc.Action == parser.ActionNoOp || rc.Action == parser.ActionRead {
+			continue
+		}
+		cat := analyzer.ResourceCategory(rc.Type)
+		infraByCategory[cat]++
+	}
+	var infraParts []string
+	for _, cat := range []string{"Database", "Networking", "Security", "Compute", "Storage", "DNS", "IAM", "LoadBalancer/CDN", "Container", "Serverless", "Messaging", "Kubernetes", "Other"} {
+		if n, ok := infraByCategory[cat]; ok && n > 0 {
+			infraParts = append(infraParts, fmt.Sprintf("%d %s", n, cat))
+		}
+	}
+	infraSummary := strings.Join(infraParts, ", ")
+	if infraSummary == "" {
+		infraSummary = "no resources"
+	}
+
+	// Resource change summary
+	counts := ast.CountByAction()
+	var rcParts []string
+	for _, action := range []string{"create", "update", "delete", "replace"} {
+		if c := counts[action]; c > 0 {
+			rcParts = append(rcParts, fmt.Sprintf("%d %s", c, action))
+		}
+	}
+	rcSummary := strings.Join(rcParts, ", ")
+	if rcSummary == "" {
+		rcSummary = "no changes"
+	}
+
+	// Blast radius summary
+	totalBlast := 0
+	maxBlastAddr := ""
+	maxBlast := 0
+	for addr, br := range blast {
+		if br.TotalAffected > 0 {
+			totalBlast += br.TotalAffected
+			if br.TotalAffected > maxBlast {
+				maxBlast = br.TotalAffected
+				maxBlastAddr = addr
+			}
+		}
+	}
+	blastSummary := "No cascading dependencies detected"
+	if totalBlast > 0 {
+		blastSummary = fmt.Sprintf("%d dependent resources may be affected across all changes", totalBlast)
+		if maxBlast > 0 {
+			blastSummary += fmt.Sprintf(". Largest blast: %s (%d downstream resources)", maxBlastAddr, maxBlast)
+		}
+	}
+
+	// Affected resources grouped by tier
+	affectedByTier := []ai.TierGroup{}
+	for _, tier := range []analyzer.RiskTier{analyzer.TierCritical, analyzer.TierHigh, analyzer.TierMedium, analyzer.TierLow} {
+		var addrs []string
+		for _, rs := range score.ResourceScores {
+			if rs.Tier == tier {
+				addrs = append(addrs, rs.Address)
+			}
+		}
+		if len(addrs) > 0 {
+			affectedByTier = append(affectedByTier, ai.TierGroup{Tier: string(tier), Resources: addrs})
+		}
+	}
+
+	// Next steps
+	nextSteps := []string{}
+	if score.Overall.Tier == analyzer.TierCritical {
+		nextSteps = []string{
+			"1. DO NOT apply this plan to production without explicit approval from your team lead",
+			"2. Review each CRITICAL finding above and ensure recovery plans are in place",
+			"3. Take a state backup: terraform state pull > backup-$(date +%Y%m%d-%H%M%S).tfstate",
+			"4. Apply in staging first if possible, then schedule production apply during a maintenance window",
+		}
+	} else if score.Overall.Tier == analyzer.TierHigh {
+		nextSteps = []string{
+			"1. Review high-risk changes above and verify they are expected",
+			"2. Take a state backup before applying",
+			"3. Verify health of dependent resources after apply",
+		}
+	} else {
+		nextSteps = []string{
+			"1. Review changes above to confirm they match expectations",
+			"2. Apply at your convenience; risk is moderate or low",
+		}
+	}
+
+	return ai.BuildRuleBasedNarrative(
+		string(score.Overall.Tier), score.Overall.Score, criticalChanges,
+		infraSummary, rcSummary, blastSummary,
+		criticalFindings, affectedByTier, recs, nextSteps,
+	)
 }
 
 func buildLLMNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[string]*analyzer.BlastRadius, cfg *config.Config, llmModel, ollamaHost string) *ai.Narrative {
