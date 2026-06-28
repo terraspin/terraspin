@@ -72,7 +72,7 @@ func DefaultConfig() *Config {
 		Version: 1,
 		LLM: &LLMConfig{
 			Provider:        "claude",
-			Model:           "claude-sonnet-4-20250514",
+			Model:           "claude-sonnet-4-6",
 			Timeout:         "30s",
 			MaxRetries:      2,
 			FallbackToRules: true,

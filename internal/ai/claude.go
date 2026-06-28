@@ -54,7 +54,7 @@ type claudeError struct {
 
 // QueryClaude sends a prompt to the Anthropic Claude API using the
 // Messages API and returns the raw text response along with total token count.
-// model defaults to CLAUDE_MODEL env var, then "claude-sonnet-4-20250514".
+// model defaults to CLAUDE_MODEL env var, then "claude-sonnet-4-6".
 // apiKey falls back to ANTHROPIC_API_KEY env var when empty.
 // Endpoint URL falls back to ANTHROPIC_BASE_URL env var, then the default.
 // The caller should wrap ctx with a timeout: context.WithTimeout(ctx, 30*time.Second).
@@ -65,7 +65,7 @@ func QueryClaude(ctx context.Context, apiKey, model, prompt string) (string, int
 	if model == "" {
 		model = os.Getenv("CLAUDE_MODEL")
 		if model == "" {
-			model = "claude-sonnet-4-20250514"
+			model = "claude-sonnet-4-6"
 		}
 	}
 	endpoint := anthropicAPI

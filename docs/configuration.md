@@ -41,7 +41,7 @@ slack:
 | Field              | Default                    | Description                              |
 | ------------------ | -------------------------- | ---------------------------------------- |
 | `provider`         | `claude`                   | LLM provider                             |
-| `model`            | `claude-sonnet-4-20250514` | Model name                               |
+| `model`            | `claude-sonnet-4-6` | Model name                               |
 | `timeout`          | `30s`                      | API call timeout                         |
 | `max_retries`      | `2`                        | Retries on transient failure             |
 | `fallback_to_rules` | `true`                   | Use rule-based narrative if LLM fails    |

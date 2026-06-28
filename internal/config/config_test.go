@@ -105,7 +105,7 @@ version: 1
 
 llm:
   provider: claude
-  model: claude-sonnet-4-20250514
+  model: claude-sonnet-4-6
   timeout: 30s
   max_retries: 2
   fallback_to_rules: true
