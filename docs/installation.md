@@ -22,7 +22,7 @@ Download pre-built binaries from [GitHub Releases](https://github.com/terraspin/
 
 ```bash
 terraspin version
-# terraspin v0.3.0
+# terraspin v0.1.0 commit=... built=... go=...
 ```
 
 ## Environment variables
