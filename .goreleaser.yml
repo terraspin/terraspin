@@ -1,0 +1,83 @@
+# GoReleaser configuration for terraspin
+# https://goreleaser.com
+
+version: 2
+
+builds:
+  - id: terraspin
+    main: ./cmd/terraspin
+    binary: terraspin
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+      - -X main.version={{.Version}}
+      - -X main.commit={{.Commit}}
+      - -X main.date={{.Date}}
+    mod_timestamp: "{{ .CommitTimestamp }}"
+
+archives:
+  - formats: [tar.gz]
+    name_template: >-
+      {{ .ProjectName }}_
+      {{- .Version }}_
+      {{- .Os }}_
+      {{- .Arch }}
+    format_overrides:
+      - goos: windows
+        formats: [zip]
+    files:
+      - LICENSE
+      - README.md
+
+checksum:
+  name_template: "checksums.txt"
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
+      - "^chore:"
+      - Merge pull request
+      - Merge branch
+
+brews:
+  - name: terraspin
+    repository:
+      owner: terraspin
+      name: homebrew-tap
+      branch: main
+    commit_author:
+      name: terraspin-bot
+      email: bot@terraspin.dev
+    homepage: "https://github.com/terraspin/terraspin"
+    description: "Terraform plan risk analysis — understand your infrastructure changes before you apply"
+    license: MIT
+    install: |
+      bin.install "terraspin"
+    test: |
+      system "#{bin}/terraspin version"
+
+# ponytail: cosign signing optional. Comment out if you don't have cosign keypair set up.
+# signs:
+#   - cmd: cosign
+#     args:
+#       - sign-blob
+#       - "--output-certificate=${certificate}"
+#       - "--output-signature=${signature}"
+#       - "${artifact}"
+#       - "--yes"
+#     artifacts: checksum
+#     certificate: "${artifact}.pem"
+
+snapshot:
+  version_template: "{{ .Tag }}-next"
