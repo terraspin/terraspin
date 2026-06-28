@@ -1,3 +1,5 @@
+// Package ai provides LLM clients (Claude, OpenAI, Ollama), prompt building,
+// rule-based narrative generation, and sensitive value redaction.
 package ai
 
 import (

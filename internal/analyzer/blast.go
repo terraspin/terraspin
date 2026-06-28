@@ -1,3 +1,4 @@
+// Package analyzer provides risk scoring and blast radius analysis for terraform plan changes.
 package analyzer
 
 import (

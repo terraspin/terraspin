@@ -1,3 +1,5 @@
+// Package integrations provides GitHub PR comments, GitLab MR notes, Slack webhooks,
+// and the MCP server for AI coding assistants.
 package integrations
 
 import (
