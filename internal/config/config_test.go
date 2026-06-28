@@ -90,7 +90,7 @@ func TestValidate_InvalidSeverity(t *testing.T) {
 func TestLoad_InvalidYAML(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".terraspin.yml")
-	os.WriteFile(path, []byte(":: invalid yaml ::"), 0644)
+	_ = os.WriteFile(path, []byte(":: invalid yaml ::"), 0644)
 	_, err := Load(path)
 	if err == nil {
 		t.Fatal("expected error for invalid YAML")

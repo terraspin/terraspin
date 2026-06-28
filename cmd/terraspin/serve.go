@@ -31,7 +31,7 @@ Flags:
   --host string        SSE host (default "localhost")
 `)
 	}
-	fs.Parse(args)
+	_ = fs.Parse(args) // ponytail: flag.ExitOnError handles errors; errcheck is noise
 
 	s := mcp.NewServer()
 

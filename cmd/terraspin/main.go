@@ -308,21 +308,22 @@ func buildRuleNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast ma
 	}
 
 	// Next steps
-	nextSteps := []string{}
-	if score.Overall.Tier == analyzer.TierCritical {
+	var nextSteps []string
+	switch score.Overall.Tier {
+	case analyzer.TierCritical:
 		nextSteps = []string{
 			"1. DO NOT apply this plan to production without explicit approval from your team lead",
 			"2. Review each CRITICAL finding above and ensure recovery plans are in place",
 			"3. Take a state backup: terraform state pull > backup-$(date +%Y%m%d-%H%M%S).tfstate",
 			"4. Apply in staging first if possible, then schedule production apply during a maintenance window",
 		}
-	} else if score.Overall.Tier == analyzer.TierHigh {
+	case analyzer.TierHigh:
 		nextSteps = []string{
 			"1. Review high-risk changes above and verify they are expected",
 			"2. Take a state backup before applying",
 			"3. Verify health of dependent resources after apply",
 		}
-	} else {
+	default:
 		nextSteps = []string{
 			"1. Review changes above to confirm they match expectations",
 			"2. Apply at your convenience; risk is moderate or low",

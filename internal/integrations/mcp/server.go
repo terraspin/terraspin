@@ -122,7 +122,7 @@ func handleAnalyzePlan(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	var b strings.Builder
 
 	// Summary header
-	b.WriteString(fmt.Sprintf("## Terraspin Plan Analysis\n\n"))
+	b.WriteString("## Terraspin Plan Analysis\n\n")
 	b.WriteString(fmt.Sprintf("**Overall Risk:** %s (score: %.0f)\n", string(score.Overall.Tier), score.Overall.Score))
 	b.WriteString(fmt.Sprintf("**Terraform:** %s\n\n", ast.TerraformVersion))
 

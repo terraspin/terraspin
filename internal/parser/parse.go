@@ -108,11 +108,7 @@ func ParsePlan(data []byte) (*PlanAST, error) {
 
 	// Fill output changes
 	for k, oc := range raw.OutputChanges {
-		ast.OutputChanges[k] = OutputChange{
-			Actions: oc.Actions,
-			Before:  oc.Before,
-			After:   oc.After,
-		}
+		ast.OutputChanges[k] = OutputChange(oc)
 	}
 
 	return ast, nil

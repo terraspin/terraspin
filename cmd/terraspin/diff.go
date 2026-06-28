@@ -177,7 +177,8 @@ func formatDiffText(result *diff.DiffResult, narr *ai.Narrative) string {
 		if len(entries) == 0 {
 			continue
 		}
-		fmt.Fprintf(&b, "──── %s ────────────────────────────────────────────────────────\n\n", strings.Title(string(status)))
+		statusLabel := strings.ToUpper(string(status))
+		fmt.Fprintf(&b, "──── %s ────────────────────────────────────────────────────────\n\n", statusLabel)
 		for _, d := range entries {
 			fmt.Fprintf(&b, "  %s [%s]\n", d.Address, d.Type)
 			for _, c := range d.Changes {
@@ -240,7 +241,8 @@ func formatDiffMD(result *diff.DiffResult, narr *ai.Narrative) string {
 		if len(entries) == 0 {
 			continue
 		}
-		fmt.Fprintf(&b, "### %s Resources\n\n", strings.Title(string(status)))
+		statusLabel := strings.ToUpper(string(status))
+		fmt.Fprintf(&b, "### %s Resources\n\n", statusLabel)
 		fmt.Fprintf(&b, "| Resource | Type | Details |\n|----------|------|--------|\n")
 		for _, d := range entries {
 			details := ""
