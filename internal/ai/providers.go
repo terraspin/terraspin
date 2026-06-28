@@ -161,12 +161,26 @@ func QueryLLM(ctx context.Context, provider, apiKey, model, host, prompt string)
 
 // Narrative holds the analysis briefing.
 type Narrative struct {
-	Provider         string   `json:"provider"`
-	Summary          string   `json:"summary"`
-	CriticalChanges  []string `json:"critical_changes"`
-	RiskAssessment   string   `json:"risk_assessment"`
-	Recommendations  []string `json:"recommendations"`
-	RollbackStrategy string   `json:"rollback_strategy"`
+	Provider            string              `json:"provider"`
+	Summary             string              `json:"summary"`
+	InfraSummary        string              `json:"infra_summary,omitempty"`
+	RiskScore           string              `json:"risk_score,omitempty"`
+	RiskLevel           string              `json:"risk_level,omitempty"`
+	ResourceChangeSummary string            `json:"resource_change_summary,omitempty"`
+	BlastRadiusSummary  string              `json:"blast_radius_summary,omitempty"`
+	CriticalFindings    []string            `json:"critical_findings,omitempty"`
+	AffectedByTier      []TierGroup         `json:"affected_by_tier,omitempty"`
+	Recommendations     []string            `json:"recommendations"`
+	NextSteps           []string            `json:"next_steps,omitempty"`
+	CriticalChanges     []string            `json:"critical_changes"`
+	RiskAssessment      string              `json:"risk_assessment"`
+	RollbackStrategy    string              `json:"rollback_strategy"`
+}
+
+// TierGroup groups affected resources by risk tier.
+type TierGroup struct {
+	Tier      string   `json:"tier"`
+	Resources []string `json:"resources"`
 }
 
 // ---------------------------------------------------------------------------
@@ -209,29 +223,96 @@ Analyze this plan and return ONLY valid JSON with these exact keys:
 	return b.String()
 }
 
-// BuildRuleBasedNarrative creates a narrative from rules (no LLM call).
-func BuildRuleBasedNarrative(riskTier string, riskScore float64, criticalChanges []string, recs []string) *Narrative {
+// BuildRuleBasedNarrative creates a thorough narrative from plan data (no LLM call).
+// Produces a genuinely useful report without any AI dependency.
+func BuildRuleBasedNarrative(riskTier string, riskScore float64, criticalChanges []string, infraSummary, resourceChangeSummary, blastRadiusSummary string, criticalFindings []string, affectedByTier []TierGroup, recs, nextSteps []string) *Narrative {
 	n := &Narrative{
-		Provider:         "rule-based",
-		Summary:          fmt.Sprintf("Terraform plan scored %s (%.0f) with %d changes requiring attention.", riskTier, riskScore, len(criticalChanges)),
-		CriticalChanges:  criticalChanges,
-		RiskAssessment:   fmt.Sprintf("Plan scored %s (%.0f). %d critical/high changes.", riskTier, riskScore, len(criticalChanges)),
-		RollbackStrategy: "Apply the previous known-good Terraform state version. For destroyed resources, restore from the most recent backup/snapshot.",
+		Provider:              "rule-based",
+		Summary:               fmt.Sprintf("This plan affects %s infrastructure with overall risk %s (%.0f/100). %d changes need immediate review.", infraSummary, strings.ToUpper(riskTier), riskScore, len(criticalChanges)),
+		InfraSummary:          infraSummary,
+		RiskScore:             fmt.Sprintf("%.0f/100", riskScore),
+		RiskLevel:             strings.ToUpper(riskTier),
+		ResourceChangeSummary: resourceChangeSummary,
+		BlastRadiusSummary:    blastRadiusSummary,
+		CriticalFindings:      criticalFindings,
+		AffectedByTier:        affectedByTier,
+		CriticalChanges:       criticalChanges,
+		RiskAssessment:        fmt.Sprintf("Plan scored %s (%.0f/100) with %d critical or high-risk changes. Changes to databases, networking, DNS, or IAM can cause cascading outages. Verify dependencies, ensure rollback plans are in place, and apply during a maintenance window if critical resources are affected.", riskTier, riskScore, len(criticalChanges)),
+		RollbackStrategy:      "1. terraform state pull > backup.tfstate (save current state)\n2. terraform destroy -target=<failed resource> (revert specific resource)\n3. terraform apply -var-file=previous.tfvars (re-apply last known good config)\n4. For stateful resources: restore from most recent backup/snapshot (RDS snapshot, EBS snapshot, S3 versioning)",
 	}
 	if recs == nil {
-		recs = []string{"Review all changes before applying", "Ensure recent state backup exists"}
+		recs = []string{"Review all changes before applying", "Ensure recent state backup exists", "Verify dependent resources are healthy"}
 	}
 	n.Recommendations = recs
+	if nextSteps == nil {
+		nextSteps = []string{"1. Review this report with your team", "2. Apply in a staging/development environment first if possible", "3. Schedule the apply during a maintenance window for critical/high changes", "4. Verify health of affected resources after apply"}
+	}
+	n.NextSteps = nextSteps
 	return n
 }
 
+// stripMarkdownFences removes surrounding ```json/``` or ~~~json/~~~ fences
+// and trims whitespace. Returns the inner text.
+func stripMarkdownFences(text string) string {
+	t := strings.TrimSpace(text)
+	for _, pair := range [][2]string{
+		{"```json", "```"},
+		{"```", "```"},
+		{"~~~json", "~~~"},
+		{"~~~", "~~~"},
+	} {
+		open, close := pair[0], pair[1]
+		if strings.HasPrefix(t, open) {
+			t = strings.TrimPrefix(t, open)
+			if idx := strings.LastIndex(t, close); idx >= 0 {
+				t = t[:idx]
+			}
+			return strings.TrimSpace(t)
+		}
+	}
+	return t
+}
+
+// extractJSON pulls the first outermost JSON object from text, handling
+// markdown fences, whitespace, and surrounding prose.
+func extractJSON(text string) (string, bool) {
+	t := stripMarkdownFences(text)
+
+	// Find first '{'
+	start := strings.IndexByte(t, '{')
+	if start < 0 {
+		return "", false
+	}
+
+	// Match braces
+	depth := 0
+	for i := start; i < len(t); i++ {
+		switch t[i] {
+		case '{':
+			depth++
+		case '}':
+			depth--
+			if depth == 0 {
+				return t[start : i+1], true
+			}
+		}
+	}
+	return "", false
+}
+
 // ParseNarrativeFromLLM tries to parse the LLM response as JSON narrative.
-// Falls back to a generic narrative on parse failure.
+// Handles markdown fences, surrounding prose, and whitespace.
+// Falls back to a generic narrative only on genuine parse failure.
 func ParseNarrativeFromLLM(text string) *Narrative {
 	n := &Narrative{Provider: "llm"}
-	if err := json.Unmarshal([]byte(text), n); err == nil && n.Summary != "" {
-		return n
+
+	// Try extracting clean JSON from the raw text first.
+	if cleaned, ok := extractJSON(text); ok {
+		if err := json.Unmarshal([]byte(cleaned), n); err == nil && n.Summary != "" {
+			return n
+		}
 	}
+
 	return &Narrative{
 		Provider:         "llm",
 		Summary:          "LLM response was not parseable as JSON. Review raw output.",

@@ -90,7 +90,36 @@ func resourceMultiplier(resourceType string) float64 {
 	return 1.0
 }
 
-// tierFromScore maps a score to its risk tier.
+// ResourceCategory maps a resource type to a human-readable infrastructure category.
+func ResourceCategory(resourceType string) string {
+	type entry struct {
+		patterns []string
+		category string
+	}
+	entries := []entry{
+		{[]string{"aws_db_", "aws_rds_", "aws_dynamodb_", "google_sql_", "google_spanner_", "azurerm_mssql_", "azurerm_cosmosdb_", "azurerm_postgresql_", "azurerm_mysql_"}, "Database"},
+		{[]string{"aws_vpc", "aws_subnet", "aws_network_acl", "aws_route_table", "aws_nat_gateway", "aws_internet_gateway", "aws_eip", "aws_egress_only_", "google_compute_network", "google_compute_subnetwork", "google_compute_route", "google_compute_address", "google_compute_router", "azurerm_virtual_network", "azurerm_subnet", "azurerm_public_ip"}, "Networking"},
+		{[]string{"aws_security_group", "aws_waf", "aws_shield", "aws_kms_", "aws_secretsmanager_", "aws_acm_", "google_compute_firewall", "google_kms_", "azurerm_network_security_", "azurerm_key_vault_"}, "Security"},
+		{[]string{"aws_instance", "aws_launch_template", "aws_autoscaling_", "google_compute_instance", "azurerm_virtual_machine", "azurerm_virtual_machine_scale_set"}, "Compute"},
+		{[]string{"aws_s3_", "aws_ebs_", "aws_efs_", "aws_backup_", "google_storage_", "google_compute_disk", "google_filestore_", "azurerm_storage_", "azurerm_managed_disk"}, "Storage"},
+		{[]string{"aws_route53_", "google_dns_", "azurerm_dns_"}, "DNS"},
+		{[]string{"aws_iam_", "google_project_iam_", "google_service_account", "azurerm_role_assignment", "azurerm_role_definition"}, "IAM"},
+		{[]string{"aws_lb", "aws_alb", "aws_elb", "aws_cloudfront_", "google_compute_forwarding_rule", "google_compute_url_map", "google_compute_target_", "azurerm_lb", "azurerm_cdn_"}, "LoadBalancer/CDN"},
+		{[]string{"aws_ecs_", "aws_eks_", "google_container_", "azurerm_kubernetes_", "azurerm_container_"}, "Container"},
+		{[]string{"aws_lambda_", "google_cloudfunctions_", "azurerm_function_app"}, "Serverless"},
+		{[]string{"aws_sns_", "aws_sqs_", "aws_eventbridge_", "google_pubsub_", "azurerm_servicebus_"}, "Messaging"},
+		{[]string{"kubernetes_"}, "Kubernetes"},
+	}
+	for _, e := range entries {
+		for _, p := range e.patterns {
+			if strings.HasPrefix(resourceType, p) {
+				return e.category
+			}
+		}
+	}
+	return "Other"
+}
+
 // tierFromScore maps a score to its risk tier.
 func tierFromScore(score float64) RiskTier {
 	switch {

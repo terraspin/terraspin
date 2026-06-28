@@ -74,26 +74,151 @@ func TestParseNarrativeFromLLM_emptyJSON(t *testing.T) {
 	if n == nil {
 		t.Fatal("nil narrative")
 	}
-	if n.Summary != "" {
-		// empty JSON should parse but have empty fields; fallback is not triggered
-		// because Unmarshal succeeds and Summary is empty string
+	// Empty JSON parses but has no Summary → falls through to fallback.
+	// This is fine: LLM returning {} is effectively a parse failure.
+	if n.Summary == "" {
+		t.Log("empty object triggers fallback (expected)")
+	}
+}
+
+func TestParseNarrativeFromLLM_markdownFence(t *testing.T) {
+	input := "```json\n{\n\"summary\": \"from fence\",\n\"critical_changes\": [\"c1\"],\n\"risk_assessment\": \"test\",\n\"recommendations\": [\"rec\"],\n\"rollback_strategy\": \"strat\"\n}\n```"
+	n := ParseNarrativeFromLLM(input)
+	if n == nil {
+		t.Fatal("nil narrative")
+	}
+	if n.Summary != "from fence" {
+		t.Errorf("summary = %q, want 'from fence'", n.Summary)
+	}
+}
+
+func TestParseNarrativeFromLLM_markdownFenceNoLang(t *testing.T) {
+	input := "```\n{\"summary\": \"plain fence\", \"risk_assessment\": \"x\", \"recommendations\": [\"r\"], \"rollback_strategy\": \"s\"}\n```"
+	n := ParseNarrativeFromLLM(input)
+	if n == nil {
+		t.Fatal("nil narrative")
+	}
+	if n.Summary != "plain fence" {
+		t.Errorf("summary = %q", n.Summary)
+	}
+}
+
+func TestParseNarrativeFromLLM_tildeFence(t *testing.T) {
+	input := "~~~json\n{\"summary\": \"tilde test\", \"risk_assessment\": \"x\", \"recommendations\": [\"r\"], \"rollback_strategy\": \"s\"}\n~~~"
+	n := ParseNarrativeFromLLM(input)
+	if n == nil {
+		t.Fatal("nil narrative")
+	}
+	if n.Summary != "tilde test" {
+		t.Errorf("summary = %q", n.Summary)
+	}
+}
+
+func TestParseNarrativeFromLLM_surroundingProse(t *testing.T) {
+	input := "Here is the analysis you asked for:\n\n{\"summary\": \"embedded json\", \"risk_assessment\": \"x\", \"recommendations\": [\"r\"], \"rollback_strategy\": \"s\"}\n\nLet me know if you need anything else."
+	n := ParseNarrativeFromLLM(input)
+	if n == nil {
+		t.Fatal("nil narrative")
+	}
+	if n.Summary != "embedded json" {
+		t.Errorf("summary = %q", n.Summary)
+	}
+}
+
+func TestParseNarrativeFromLLM_fenceWithProse(t *testing.T) {
+	input := "Certainly! Here is the plan analysis:\n\n```json\n{\n  \"summary\": \"fence with prose around it\",\n  \"critical_changes\": [\"c1\", \"c2\"],\n  \"risk_assessment\": \"high risk\",\n  \"recommendations\": [\"r1\"],\n  \"rollback_strategy\": \"revert\"\n}\n```\n\nHope this helps!"
+	n := ParseNarrativeFromLLM(input)
+	if n == nil {
+		t.Fatal("nil narrative")
+	}
+	if n.Summary != "fence with prose around it" {
+		t.Errorf("summary = %q", n.Summary)
+	}
+	if len(n.CriticalChanges) != 2 {
+		t.Errorf("critical_changes = %v", n.CriticalChanges)
+	}
+}
+
+func TestParseNarrativeFromLLM_leadingWhitespace(t *testing.T) {
+	input := "\n\n  \n  {\"summary\": \"whitespace test\", \"risk_assessment\": \"x\", \"recommendations\": [\"r\"], \"rollback_strategy\": \"s\"}\n  "
+	n := ParseNarrativeFromLLM(input)
+	if n == nil {
+		t.Fatal("nil narrative")
+	}
+	if n.Summary != "whitespace test" {
+		t.Errorf("summary = %q", n.Summary)
+	}
+}
+
+func TestParseNarrativeFromLLM_newFields(t *testing.T) {
+	input := `{
+  "summary": "full test",
+  "critical_changes": ["c1"],
+  "risk_assessment": "assessment",
+  "recommendations": ["r1"],
+  "rollback_strategy": "strategy",
+  "infra_summary": "5 Database",
+  "risk_score": "85/100",
+  "risk_level": "CRITICAL",
+  "resource_change_summary": "2 delete, 3 create",
+  "blast_radius_summary": "10 dependent resources",
+  "critical_findings": ["finding1", "finding2"],
+  "affected_by_tier": [
+    {"tier": "critical", "resources": ["aws_db.main", "aws_vpc.prod"]},
+    {"tier": "high", "resources": ["aws_sg.web"]}
+  ],
+  "next_steps": ["1. backup state", "2. apply in staging"]
+}`
+	n := ParseNarrativeFromLLM(input)
+	if n == nil {
+		t.Fatal("nil narrative")
+	}
+	if n.Summary != "full test" {
+		t.Errorf("summary = %q", n.Summary)
+	}
+	if n.InfraSummary != "5 Database" {
+		t.Errorf("infra_summary = %q", n.InfraSummary)
+	}
+	if n.RiskScore != "85/100" {
+		t.Errorf("risk_score = %q", n.RiskScore)
+	}
+	if n.BlastRadiusSummary != "10 dependent resources" {
+		t.Errorf("blast_radius_summary = %q", n.BlastRadiusSummary)
+	}
+	if len(n.CriticalFindings) != 2 {
+		t.Errorf("critical_findings = %v", n.CriticalFindings)
+	}
+	if len(n.AffectedByTier) != 2 {
+		t.Errorf("affected_by_tier = %v", n.AffectedByTier)
+	}
+	if len(n.NextSteps) != 2 {
+		t.Errorf("next_steps = %v", n.NextSteps)
 	}
 }
 
 func TestBuildRuleBasedNarrative(t *testing.T) {
 	changes := []string{"aws_db_instance.p → DELETE"}
+	findings := []string{"[CRITICAL] aws_db_instance.p → DELETE: Blast radius of 2 dependent resources"}
 	recs := []string{"Verify snapshot exists"}
-	n := BuildRuleBasedNarrative("critical", 92.5, changes, recs)
+	affected := []TierGroup{{Tier: "critical", Resources: []string{"aws_db_instance.p"}}}
+	nextSteps := []string{"1. Review before applying"}
+	n := BuildRuleBasedNarrative("critical", 92.5, changes, "2 Database, 1 Networking", "1 delete, 1 create", "2 dependent resources", findings, affected, recs, nextSteps)
 	if n == nil {
 		t.Fatal("nil narrative")
 	}
 	if n.Provider != "rule-based" {
 		t.Errorf("provider = %q", n.Provider)
 	}
-	if !strings.Contains(n.Summary, "critical") {
-		t.Error("summary missing risk tier")
+	if !strings.Contains(strings.ToLower(n.Summary), "critical") {
+		t.Errorf("summary missing risk tier: %s", n.Summary)
 	}
-	if !strings.Contains(n.RiskAssessment, "critical") {
+	if !strings.Contains(n.InfraSummary, "Database") {
+		t.Error("infra summary missing")
+	}
+	if n.RiskScore == "" || n.RiskLevel == "" {
+		t.Error("risk score/level missing")
+	}
+	if !strings.Contains(strings.ToLower(n.RiskAssessment), "critical") {
 		t.Error("risk assessment missing tier")
 	}
 	if n.RollbackStrategy == "" {
@@ -102,12 +227,24 @@ func TestBuildRuleBasedNarrative(t *testing.T) {
 	if len(n.Recommendations) != 1 || n.Recommendations[0] != "Verify snapshot exists" {
 		t.Errorf("recommendations = %v", n.Recommendations)
 	}
+	if len(n.CriticalFindings) != 1 {
+		t.Error("critical findings missing")
+	}
+	if len(n.NextSteps) != 1 {
+		t.Error("next steps missing")
+	}
+	if len(n.AffectedByTier) != 1 {
+		t.Error("affected_by_tier missing")
+	}
 }
 
 func TestBuildRuleBasedNarrative_nilRecs(t *testing.T) {
-	n := BuildRuleBasedNarrative("low", 10, nil, nil)
+	n := BuildRuleBasedNarrative("low", 10, nil, "1 Storage", "1 create", "no blast radius", nil, nil, nil, nil)
 	if len(n.Recommendations) == 0 {
 		t.Error("should have default recommendations when nil")
+	}
+	if len(n.NextSteps) == 0 {
+		t.Error("should have default next steps when nil")
 	}
 }
 
