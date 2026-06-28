@@ -1,0 +1,234 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.7.2",
+  "variables": {
+    "region": {
+      "value": "us-east-1"
+    },
+    "environment": {
+      "value": "production"
+    }
+  },
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_instance.web",
+          "mode": "managed",
+          "type": "aws_instance",
+          "name": "web",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "schema_version": 1,
+          "values": {
+            "ami": "ami-0c55b159cbfafe1f0",
+            "instance_type": "t3.micro",
+            "tags": {
+              "Name": "web-server"
+            }
+          },
+          "sensitive_values": {}
+        },
+        {
+          "address": "aws_db_instance.primary",
+          "mode": "managed",
+          "type": "aws_db_instance",
+          "name": "primary",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "schema_version": 1,
+          "values": {
+            "engine": "postgres",
+            "engine_version": "16.3",
+            "instance_class": "db.r6g.large",
+            "storage_encrypted": true
+          },
+          "sensitive_values": {
+            "password": true
+          }
+        },
+        {
+          "address": "data.aws_availability_zones.available",
+          "mode": "data",
+          "type": "aws_availability_zones",
+          "name": "available",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "schema_version": 0,
+          "values": {
+            "names": ["us-east-1a", "us-east-1b"]
+          },
+          "sensitive_values": {}
+        }
+      ],
+      "child_modules": [
+        {
+          "address": "module.network",
+          "resources": [
+            {
+              "address": "module.network.aws_vpc.main",
+              "mode": "managed",
+              "type": "aws_vpc",
+              "name": "main",
+              "provider_name": "registry.terraform.io/hashicorp/aws",
+              "schema_version": 1,
+              "values": {
+                "cidr_block": "10.0.0.0/16"
+              },
+              "sensitive_values": {}
+            }
+          ]
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "aws_instance.web",
+      "module_address": "",
+      "mode": "managed",
+      "type": "aws_instance",
+      "name": "web",
+      "index": null,
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["create"],
+        "before": null,
+        "after": {
+          "ami": "ami-0c55b159cbfafe1f0",
+          "instance_type": "t3.micro",
+          "tags": {
+            "Name": "web-server"
+          }
+        },
+        "after_unknown": {
+          "id": true,
+          "arn": true
+        },
+        "before_sensitive": false,
+        "after_sensitive": {}
+      },
+      "action_reason": ""
+    },
+    {
+      "address": "aws_db_instance.primary",
+      "module_address": "",
+      "mode": "managed",
+      "type": "aws_db_instance",
+      "name": "primary",
+      "index": null,
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["delete"],
+        "before": {
+          "engine": "postgres",
+          "engine_version": "16.3",
+          "instance_class": "db.r6g.large",
+          "password": "super-secret-db-pass-123",
+          "storage_encrypted": true,
+          "skip_final_snapshot": false
+        },
+        "after": null,
+        "after_unknown": {},
+        "before_sensitive": {
+          "password": true
+        },
+        "after_sensitive": {}
+      },
+      "action_reason": ""
+    },
+    {
+      "address": "module.network.aws_vpc.main",
+      "module_address": "module.network",
+      "mode": "managed",
+      "type": "aws_vpc",
+      "name": "main",
+      "index": null,
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "cidr_block": "10.0.0.0/16",
+          "enable_dns_support": true
+        },
+        "after": {
+          "cidr_block": "10.0.0.0/16",
+          "enable_dns_support": false
+        },
+        "after_unknown": {},
+        "before_sensitive": {},
+        "after_sensitive": {}
+      },
+      "action_reason": ""
+    },
+    {
+      "address": "aws_security_group.web",
+      "module_address": "",
+      "mode": "managed",
+      "type": "aws_security_group",
+      "name": "web",
+      "index": null,
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["delete", "create"],
+        "before": {
+          "name": "web-sg",
+          "description": "Web server security group"
+        },
+        "after": {
+          "name": "web-sg-v2",
+          "description": "Web server security group v2"
+        },
+        "after_unknown": {},
+        "before_sensitive": false,
+        "after_sensitive": {}
+      },
+      "action_reason": "replacement requested"
+    },
+    {
+      "address": "aws_s3_bucket.logs",
+      "module_address": "",
+      "mode": "managed",
+      "type": "aws_s3_bucket",
+      "name": "logs",
+      "index": null,
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": ["no-op"],
+        "before": {
+          "bucket": "my-app-logs",
+          "acl": "private"
+        },
+        "after": {
+          "bucket": "my-app-logs",
+          "acl": "private"
+        },
+        "after_unknown": {},
+        "before_sensitive": false,
+        "after_sensitive": {}
+      },
+      "action_reason": ""
+    }
+  ],
+  "output_changes": {
+    "web_public_ip": {
+      "actions": ["create"],
+      "before": null,
+      "after": null
+    }
+  },
+  "configuration": {
+    "provider_config": {
+      "aws": {
+        "name": "aws",
+        "expressions": {
+          "region": {
+            "references": ["var.region"]
+          }
+        }
+      }
+    }
+  },
+  "relevant_attributes": [],
+  "checks": null,
+  "applyable": true,
+  "complete": true,
+  "errored": false
+}
