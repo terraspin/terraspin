@@ -52,10 +52,11 @@ changelog:
 
 brews:
   - name: terraspin
-    repository:
+    tap:
       owner: terraspin
       name: homebrew-tap
       branch: main
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     commit_author:
       name: terraspin-bot
       email: bot@terraspin.dev
