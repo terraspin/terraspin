@@ -48,8 +48,7 @@ The analyze command makes an LLM request only when an `llm` config block exists 
 
 ```bash
 ANTHROPIC_API_KEY="..." terraspin --llm claude plan.json
-OPENAI_API_KEY="..." terraspin --llm openai plan.json
 terraspin --llm ollama --ollama-host http://localhost:11434 plan.json
 ```
 
-Analyze falls back to a rule-based narrative when an LLM call fails. `diff` instead prints the diff without an AI narrative when its LLM call fails.
+For OpenAI, set `OPENAI_API_KEY` and select `--llm openai`. Analyze falls back to a rule-based narrative when an LLM call fails. `diff` instead prints the diff without an AI narrative when its LLM call fails.
