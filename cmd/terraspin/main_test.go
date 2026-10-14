@@ -33,9 +33,26 @@ func TestBuildLLMNarrativeFallsBackWhenLLMDisabled(t *testing.T) {
 	score := analyzer.ScorePlan(ast)
 	blast := analyzer.AnalyzeBlastRadius(ast.Changes, analyzer.ParseDependencyRefs(data))
 
-	narr := buildLLMNarrative(ast, score, blast, &config.Config{Version: 1}, "", "")
+	narr, err := buildLLMNarrative(ast, score, blast, &config.Config{Version: 1}, "", "")
+	if err != nil {
+		t.Fatal(err)
+	}
 	if narr == nil || narr.Summary == "" {
 		t.Fatal("expected a rule-based narrative")
+	}
+}
+
+func TestBuildLLMNarrativeHonorsFallbackSetting(t *testing.T) {
+	ast := &parser.PlanAST{}
+	score := &analyzer.PlanScore{Counts: map[analyzer.RiskTier]int{}}
+	cfg := &config.Config{LLM: &config.LLMConfig{Provider: "claude", Timeout: "30s", FallbackToRules: false}}
+	if _, err := buildLLMNarrative(ast, score, nil, cfg, "", ""); err == nil || !strings.Contains(err.Error(), "ANTHROPIC_API_KEY") {
+		t.Fatalf("err=%v, want missing key", err)
+	}
+	cfg.LLM.FallbackToRules = true
+	narr, err := buildLLMNarrative(ast, score, nil, cfg, "", "")
+	if err != nil || narr == nil {
+		t.Fatalf("narr=%v err=%v", narr, err)
 	}
 }
 

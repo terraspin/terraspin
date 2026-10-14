@@ -107,11 +107,12 @@ func QueryClaude(ctx context.Context, apiKey, model, prompt string) (string, int
 	}
 
 	if resp.StatusCode != http.StatusOK {
+		message := string(respRaw)
 		var cerr claudeError
 		if json.Unmarshal(respRaw, &cerr) == nil && cerr.Message != "" {
-			return "", 0, fmt.Errorf("claude: HTTP %d: %s", resp.StatusCode, cerr.Message)
+			message = cerr.Message
 		}
-		return "", 0, fmt.Errorf("claude: HTTP %d: %s", resp.StatusCode, string(respRaw))
+		return "", 0, &HTTPError{Provider: "claude", StatusCode: resp.StatusCode, Message: message, RetryAfter: parseRetryAfter(resp.Header.Get("Retry-After"))}
 	}
 
 	var cresp claudeResponse

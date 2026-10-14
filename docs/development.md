@@ -63,5 +63,5 @@ No framework, no ORM, no DI container. Stdlib HTTP for all API clients.
 - Test fixtures in `testdata/` — used across multiple test files
 - `main()` is the only orchestrator — reads like a script
 - Config file validation happens at `Load()` time — invalid configs fail fast
-- Analyze and diff use a fixed 30-second LLM timeout; analyze falls back to rules, while diff omits the AI narrative on error
+- LLM timeout, retries, model selection, and fallback behavior are configured by the `llm` block; analyze and diff share the provider execution path
 - Sensitive values are redacted before any external API call

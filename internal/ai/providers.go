@@ -14,6 +14,8 @@ import (
 // OpenAI provider
 // ---------------------------------------------------------------------------
 
+var openAIAPI = "https://api.openai.com/v1/chat/completions"
+
 type openAIRequest struct {
 	Model     string          `json:"model"`
 	MaxTokens int             `json:"max_tokens"`
@@ -51,7 +53,7 @@ func QueryOpenAI(ctx context.Context, apiKey, model, prompt string) (string, int
 	}
 	raw, _ := json.Marshal(body)
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, "https://api.openai.com/v1/chat/completions", bytes.NewReader(raw))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, openAIAPI, bytes.NewReader(raw))
 	if err != nil {
 		return "", 0, fmt.Errorf("openai: create request: %w", err)
 	}
@@ -66,7 +68,7 @@ func QueryOpenAI(ctx context.Context, apiKey, model, prompt string) (string, int
 
 	respRaw, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return "", 0, fmt.Errorf("openai: HTTP %d: %s", resp.StatusCode, string(respRaw))
+		return "", 0, &HTTPError{Provider: "openai", StatusCode: resp.StatusCode, Message: string(respRaw), RetryAfter: parseRetryAfter(resp.Header.Get("Retry-After"))}
 	}
 
 	var cresp openAIResponse
@@ -127,7 +129,7 @@ func QueryOllama(ctx context.Context, host, model, prompt string) (string, int, 
 
 	respRaw, _ := io.ReadAll(resp.Body)
 	if resp.StatusCode != http.StatusOK {
-		return "", 0, fmt.Errorf("ollama: HTTP %d: %s", resp.StatusCode, string(respRaw))
+		return "", 0, &HTTPError{Provider: "ollama", StatusCode: resp.StatusCode, Message: string(respRaw), RetryAfter: parseRetryAfter(resp.Header.Get("Retry-After"))}
 	}
 
 	var oresp ollamaResponse
@@ -161,20 +163,20 @@ func QueryLLM(ctx context.Context, provider, apiKey, model, host, prompt string)
 
 // Narrative holds the analysis briefing.
 type Narrative struct {
-	Provider            string              `json:"provider"`
-	Summary             string              `json:"summary"`
-	InfraSummary        string              `json:"infra_summary,omitempty"`
-	RiskScore           string              `json:"risk_score,omitempty"`
-	RiskLevel           string              `json:"risk_level,omitempty"`
-	ResourceChangeSummary string            `json:"resource_change_summary,omitempty"`
-	BlastRadiusSummary  string              `json:"blast_radius_summary,omitempty"`
-	CriticalFindings    []string            `json:"critical_findings,omitempty"`
-	AffectedByTier      []TierGroup         `json:"affected_by_tier,omitempty"`
-	Recommendations     []string            `json:"recommendations"`
-	NextSteps           []string            `json:"next_steps,omitempty"`
-	CriticalChanges     []string            `json:"critical_changes"`
-	RiskAssessment      string              `json:"risk_assessment"`
-	RollbackStrategy    string              `json:"rollback_strategy"`
+	Provider              string      `json:"provider"`
+	Summary               string      `json:"summary"`
+	InfraSummary          string      `json:"infra_summary,omitempty"`
+	RiskScore             string      `json:"risk_score,omitempty"`
+	RiskLevel             string      `json:"risk_level,omitempty"`
+	ResourceChangeSummary string      `json:"resource_change_summary,omitempty"`
+	BlastRadiusSummary    string      `json:"blast_radius_summary,omitempty"`
+	CriticalFindings      []string    `json:"critical_findings,omitempty"`
+	AffectedByTier        []TierGroup `json:"affected_by_tier,omitempty"`
+	Recommendations       []string    `json:"recommendations"`
+	NextSteps             []string    `json:"next_steps,omitempty"`
+	CriticalChanges       []string    `json:"critical_changes"`
+	RiskAssessment        string      `json:"risk_assessment"`
+	RollbackStrategy      string      `json:"rollback_strategy"`
 }
 
 // TierGroup groups affected resources by risk tier.

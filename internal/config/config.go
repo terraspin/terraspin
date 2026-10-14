@@ -4,6 +4,7 @@ package config
 import (
 	"fmt"
 	"os"
+	"time"
 
 	"gopkg.in/yaml.v3"
 )
@@ -24,6 +25,15 @@ type LLMConfig struct {
 	Timeout         string `yaml:"timeout"`
 	MaxRetries      int    `yaml:"max_retries"`
 	FallbackToRules bool   `yaml:"fallback_to_rules"`
+	modelExplicit   bool
+}
+
+// ExplicitModel returns the user-configured model, excluding loader defaults.
+func (c *LLMConfig) ExplicitModel() string {
+	if c != nil && c.modelExplicit {
+		return c.Model
+	}
+	return ""
 }
 
 // RiskConfig holds risk behavior settings.
@@ -97,6 +107,15 @@ func Load(path string) (*Config, error) {
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, fmt.Errorf("config: parse %s: %w", path, err)
 	}
+	var fields struct {
+		LLM map[string]any `yaml:"llm"`
+	}
+	if err := yaml.Unmarshal(data, &fields); err != nil {
+		return nil, fmt.Errorf("config: parse %s: %w", path, err)
+	}
+	if _, ok := fields.LLM["model"]; ok && cfg.LLM != nil {
+		cfg.LLM.modelExplicit = true
+	}
 	if err := cfg.validate(); err != nil {
 		return nil, fmt.Errorf("config: validate %s: %w", path, err)
 	}
@@ -106,6 +125,14 @@ func Load(path string) (*Config, error) {
 func (c *Config) validate() error {
 	if c.Version != 1 {
 		return fmt.Errorf("unsupported version %d", c.Version)
+	}
+	if c.LLM != nil {
+		if _, err := time.ParseDuration(c.LLM.Timeout); err != nil {
+			return fmt.Errorf("llm.timeout: %q is not a valid duration", c.LLM.Timeout)
+		}
+		if c.LLM.MaxRetries < 0 {
+			return fmt.Errorf("llm.max_retries: must be non-negative")
+		}
 	}
 	for i, r := range c.Rules {
 		if r.ID == "" {

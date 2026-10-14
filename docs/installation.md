@@ -45,7 +45,7 @@ The command prints the version and, for release builds, commit/build metadata. A
 | `CI_MERGE_REQUEST_IID` | GitLab merge-request IID for notes |
 | `SLACK_WEBHOOK_URL` | Slack notification webhook |
 
-Only the variables above are read directly by the executable. `.env.example` is a convenience template; `LLM_PROVIDER`, `OPENAI_MODEL`, `OLLAMA_HOST`, and `OLLAMA_MODEL` in that file are not read at runtime. Use `--llm`, `--model`, and `--ollama-host` instead. If you use `direnv`, `.envrc` can source a local `.env` after `direnv allow`.
+Only the variables above are read directly by the executable. `.env.example` contains only these runtime variables; use `--llm`, `--model`, and `--ollama-host` to select providers and models. If you use `direnv`, `.envrc` can source a local `.env` after `direnv allow`.
 
 ## Development shell
 

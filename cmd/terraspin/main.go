@@ -82,8 +82,8 @@ func main() {
 	// Load config
 	cfg, err := config.Load(configPath)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: config error (%v), using defaults\n", err)
-		cfg = config.DefaultConfig()
+		fmt.Fprintf(os.Stderr, "config error: %v\n", err)
+		os.Exit(2)
 	}
 
 	// Override LLM provider from flag (flag default is "claude", only override if user set it)
@@ -144,7 +144,11 @@ func main() {
 	if noAI {
 		narr = buildRuleNarrative(ast, score, blast)
 	} else {
-		narr = buildLLMNarrative(ast, score, blast, cfg, llmModel, ollamaHost)
+		narr, err = buildLLMNarrative(ast, score, blast, cfg, llmModel, ollamaHost)
+		if err != nil {
+			fmt.Fprintf(os.Stderr, "LLM error: %v\n", err)
+			os.Exit(2)
+		}
 	}
 
 	// Format output
@@ -337,9 +341,9 @@ func buildRuleNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast ma
 	)
 }
 
-func buildLLMNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[string]*analyzer.BlastRadius, cfg *config.Config, llmModel, ollamaHost string) *ai.Narrative {
+func buildLLMNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[string]*analyzer.BlastRadius, cfg *config.Config, llmModel, ollamaHost string) (*ai.Narrative, error) {
 	if cfg == nil || cfg.LLM == nil {
-		return buildRuleNarrative(ast, score, blast)
+		return buildRuleNarrative(ast, score, blast), nil
 	}
 
 	provider := cfg.LLM.Provider
@@ -360,6 +364,11 @@ func buildLLMNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast map
 	if provider == "openai" {
 		apiKey = os.Getenv("OPENAI_API_KEY")
 	}
+	model := llmModel
+	if model == "" {
+		model = cfg.LLM.ExplicitModel()
+	}
+	timeout, _ := time.ParseDuration(cfg.LLM.Timeout)
 
 	counts := make(map[string]int)
 	for k, v := range score.Counts {
@@ -368,16 +377,19 @@ func buildLLMNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast map
 
 	prompt := ai.BuildAnalysisPrompt(changes, string(score.Overall.Tier), score.Overall.Score, counts)
 
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	text, _, err := ai.QueryLLM(ctx, provider, apiKey, llmModel, ollamaHost, prompt)
+	text, _, err := ai.Execute(context.Background(), ai.LLMOptions{
+		Provider: provider, APIKey: apiKey, Model: model, OllamaHost: ollamaHost,
+		Timeout: timeout, MaxRetries: cfg.LLM.MaxRetries,
+	}, prompt)
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: LLM error (%v), falling back to rule-based analysis\n", err)
-		return buildRuleNarrative(ast, score, blast)
+		if cfg.LLM.FallbackToRules {
+			fmt.Fprintf(os.Stderr, "warning: LLM error (%v), falling back to rule-based analysis\n", err)
+			return buildRuleNarrative(ast, score, blast), nil
+		}
+		return nil, err
 	}
 
-	return ai.ParseNarrativeFromLLM(text)
+	return ai.ParseNarrativeFromLLM(text), nil
 }
 
 func checkFailOn(tier analyzer.RiskTier, threshold string) int {
