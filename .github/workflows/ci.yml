@@ -56,3 +56,10 @@ jobs:
 
       - name: Build
         run: go build -ldflags="-s -w" ./cmd/terraspin/
+
+      - name: Run without config
+        run: |
+          go build -o "$RUNNER_TEMP/terraspin" ./cmd/terraspin
+          mkdir "$RUNNER_TEMP/terraspin-clean"
+          cd "$RUNNER_TEMP/terraspin-clean"
+          "$RUNNER_TEMP/terraspin" "$GITHUB_WORKSPACE/testdata/plan.json"
