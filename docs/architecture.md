@@ -12,7 +12,7 @@ plan.json → ParsePlan() → RedactSensitive() → ScorePlan() → EvaluateRule
                                           FormatText/JSON/Markdown → output
 ```
 
-Each step is a self-contained package with zero cross-package coupling. `main()` orchestrates the pipeline linearly — no middleware, no DI container, no factory. Read the order of imports and function calls in `cmd/terraspin/main.go` to understand the full flow.
+`main()` orchestrates the analyze pipeline linearly. `diff` has its own two-plan comparison path in `cmd/terraspin/diff.go`.
 
 ## Risk scoring
 
@@ -28,7 +28,7 @@ Custom rules in `.terraspin.yml` can escalate a resource's tier if the rule seve
 
 ## Blast radius
 
-Builds a dependency graph from terraform plan JSON references. For each resource, traverses direct dependencies and reports the total affected count and the dependency tree. Used to highlight cascading impact: "deleting the RDS instance → Lambda function loses DB connectivity".
+Builds a dependency graph from expression references in the Terraform root module. For each resource, it traverses reverse dependencies and reports affected-resource counts. It excludes `module.*` references, data sources, and `depends_on` relationships.
 
 ## AI narrative
 
@@ -40,11 +40,11 @@ A structured prompt containing the plan summary (resource counts, tiers, actions
 - `recommendations` — specific actionable checks (not "review changes")
 - `rollback_strategy` — numbered recovery steps
 
-If the LLM call fails or `--no-ai` is set, a rule-based narrative is generated from the scored data.
+Analyze uses a rule-based narrative when no LLM is enabled, `--no-ai` is set, or its LLM call fails. Diff prints its structural result without an AI narrative when its LLM call fails.
 
 ## Sensitive value redaction
 
-Values marked `sensitive` in the terraform plan are redacted from the data **before** any LLM call. The LLM never sees sensitive values.
+Values Terraform marks sensitive are redacted before LLM calls. The current prompts contain summary metadata rather than raw `Before`/`After` values; unmarked values can still appear in local `diff` output.
 
 ## Internal packages
 
@@ -54,6 +54,6 @@ Values marked `sensitive` in the terraform plan are redacted from the data **bef
 | `ai`              | LLM providers (Claude, OpenAI, Ollama), prompt building, narrative types, sensitive redaction |
 | `analyzer`        | Risk scoring algorithm, blast radius dependency graph        |
 | `config`          | `.terraspin.yml` loading, validation, rule evaluation        |
-| `formatter`       | Output formatting: terminal (with color), JSON, markdown     |
+| `formatter`       | Output formatting: terminal text, JSON, markdown             |
 | `integrations`    | GitHub PR comments, GitLab MR notes, Slack webhooks, MCP server |
 | `diff`            | Two-plan comparison: resource diffs (added/modified/removed) |

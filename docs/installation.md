@@ -1,11 +1,5 @@
 # Installation
 
-## Homebrew
-
-```bash
-brew install terraspin/tap/terraspin
-```
-
 ## Go install
 
 ```bash
@@ -22,23 +16,32 @@ Download pre-built binaries from [GitHub Releases](https://github.com/terraspin/
 
 ```bash
 terraspin version
-# terraspin v0.1.0 commit=... built=... go=...
 ```
+
+The command prints the version and, for release builds, commit/build metadata.
 
 ## Environment variables
 
-| Variable            | Purpose                       |
-| ------------------- | ----------------------------- |
-| `ANTHROPIC_API_KEY` | Claude LLM provider           |
-| `OPENAI_API_KEY`    | OpenAI LLM provider           |
-| `GITHUB_TOKEN`      | GitHub PR comment integration |
-| `SLACK_WEBHOOK_URL` | Slack notifications           |
+| Variable | Purpose |
+| --- | --- |
+| `ANTHROPIC_API_KEY` | API key for Claude when Claude is enabled |
+| `ANTHROPIC_BASE_URL` | Optional Anthropic-compatible endpoint URL |
+| `CLAUDE_MODEL` | Claude model when `--model` is not set |
+| `OPENAI_API_KEY` | API key for OpenAI when OpenAI is selected |
+| `GITHUB_TOKEN` | GitHub PR comment integration token |
+| `GITHUB_REPOSITORY` | GitHub repository for PR comments |
+| `GITHUB_REF` / `GITHUB_REF_NAME` | GitHub PR reference used to find the PR number |
+| `CI_SERVER_URL` | GitLab base URL (defaults to `https://gitlab.com`) |
+| `GITLAB_TOKEN` / `CI_JOB_TOKEN` | GitLab MR note token |
+| `CI_PROJECT_ID` | GitLab project ID for MR notes |
+| `CI_MERGE_REQUEST_IID` | GitLab merge-request IID for notes |
+| `SLACK_WEBHOOK_URL` | Slack notification webhook |
 
-Copy `.env.example` to `.env` and fill in the keys you need. The `.envrc` file (direnv) will source it automatically if you use `direnv allow`.
+Only the variables above are read directly by the executable. `.env.example` is a convenience template; `LLM_PROVIDER`, `OPENAI_MODEL`, `OLLAMA_HOST`, and `OLLAMA_MODEL` in that file are not read at runtime. Use `--llm`, `--model`, and `--ollama-host` instead. If you use `direnv`, `.envrc` can source a local `.env` after `direnv allow`.
 
 ## Development shell
 
-A `shell.nix` is provided with all dev tooling (Go 1.24, goreleaser, golangci-lint, terraform, opentofu, ollama, etc.):
+A `shell.nix` provides development tooling:
 
 ```bash
 nix-shell

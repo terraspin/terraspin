@@ -106,18 +106,4 @@ terraspin diff <plan_a.json> <plan_b.json> [flags]
 terraspin diff prod-plan.json staging-plan.json --label-a prod --label-b staging
 ```
 
-## GitHub Action
-
-Use the standalone GitHub Action repository:
-
-```yaml
-- name: Terraspin plan analysis
-  uses: terraspin/terraspin-action@v1
-  with:
-    plan-file: plan.json
-    fail-on: high
-    post-comment: true
-  env:
-    ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-```
+> A standalone GitHub Action is not currently published. In GitHub Actions, install or build the CLI and invoke `terraspin` directly.

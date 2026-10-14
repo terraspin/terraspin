@@ -45,7 +45,7 @@ testdata/          Terraform plan fixtures for testing
 - `github.go` — GitHub PR comment client (post + update with tag)
 - `gitlab.go` — GitLab MR note client
 - `slack.go` — Slack webhook notifications
-- `http.go` — Shared HTTP helpers (retry, auth headers)
+- `http.go` — Shared HTTP helpers (authentication headers and JSON requests)
 - `mcp/server.go` — MCP tool registration and server setup
 
 ### `diff`
@@ -58,6 +58,7 @@ testdata/          Terraform plan fixtures for testing
 - `plan_empty.json` — no changes
 - `plan_with_modules.json` — module-based resources
 - `plan_with_sensitive.json` — sensitive value redaction scenarios
+- `plan_with_sensitive_collections_{a,b}.json` — sensitive list, nested-list, and subtree redaction scenarios
 
 ## Config files
 
