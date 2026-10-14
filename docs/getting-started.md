@@ -7,48 +7,48 @@
 terraform plan -out=plan.tfplan
 terraform show -json plan.tfplan > plan.json
 
-# Analyze it
-terraspin plan.json
+# Analyze it without an LLM request
+terraspin --no-ai plan.json
 ```
 
-## Pipe from terraform
+## Pipe a saved plan
+
+`terraform plan -json` emits Terraform UI events, not a `terraform show -json` plan document. Pipe the saved plan JSON instead:
 
 ```bash
-terraform plan -json | terraspin
+terraform show -json plan.tfplan | terraspin --no-ai
 ```
 
 ## Common workflows
 
 ```bash
 # Fail CI if risk is high or above
-terraspin plan.json --fail-on high
+terraspin --fail-on high plan.json
 
 # Rule-based only — no LLM API call
-terraspin plan.json --no-ai
+terraspin --no-ai plan.json
 
 # JSON output for scripting
-terraspin plan.json --format json
+terraspin --format json plan.json
 
 # Show all risk tiers (verbose)
-terraspin plan.json -v
+terraspin -v plan.json
 
 # Post analysis as PR comment (auto-detects GitHub/GitLab env)
-terraspin plan.json --post-comment
+terraspin --post-comment plan.json
 ```
 
 ## With a config file
 
-Create `.terraspin.yml` in your Terraform workspace — see [Configuration](configuration.md).
+Create `.terraspin.yml` in your Terraform workspace — see [Configuration](configuration.md). A config file without an `llm` block still enables the documented Claude defaults; no config file uses rule-based analysis.
 
 ## AI providers
 
-Terraspin uses Claude by default. Set `ANTHROPIC_API_KEY` and you're done.
-
-To use OpenAI or Ollama:
+The analyze command makes an LLM request only when an `llm` config block exists or the `--llm` flag is set. The diff command uses its own flags and requests an LLM only when its matching API key is present.
 
 ```bash
-terraspin plan.json --llm openai
-terraspin plan.json --llm ollama --ollama-host http://localhost:11434
+ANTHROPIC_API_KEY="..." terraspin --llm claude plan.json
+terraspin --llm ollama --ollama-host http://localhost:11434 plan.json
 ```
 
-If the LLM call fails, Terraspin falls back to rule-based analysis automatically.
+For OpenAI, set `OPENAI_API_KEY` and select `--llm openai`. Analyze falls back to a rule-based narrative when an LLM call fails. `diff` instead prints the diff without an AI narrative when its LLM call fails.

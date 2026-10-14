@@ -3,7 +3,7 @@
 ## Prerequisites
 
 - Go 1.24+
-- Optional: [Nix](https://nixos.org) with flakes enabled (provides all tooling via `shell.nix`)
+- Optional: [Nix](https://nixos.org) for the provided `shell.nix` development environment
 
 ## Dev environment
 
@@ -61,8 +61,7 @@ No framework, no ORM, no DI container. Stdlib HTTP for all API clients.
 
 - All internal packages are under `internal/` — not importable by external Go modules
 - Test fixtures in `testdata/` — used across multiple test files
-- Zero cross-package coupling — each package is self-contained
 - `main()` is the only orchestrator — reads like a script
 - Config file validation happens at `Load()` time — invalid configs fail fast
-- LLM calls have a 30s timeout and automatic fallback to rule-based analysis
+- Analyze and diff use a fixed 30-second LLM timeout; analyze falls back to rules, while diff omits the AI narrative on error
 - Sensitive values are redacted before any external API call

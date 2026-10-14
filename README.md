@@ -2,50 +2,57 @@
 
 **Understand your infrastructure changes before you apply them.**
 
-Terraspin is an open-source CLI tool and AI agent that turns `terraform plan` output into risk-scored, human-readable analysis. It tells you not just _what_ will change, but _what it means_, _what could go wrong_, and _how to recover_ if apply fails.
+Terraspin is a CLI that reads `terraform show -json` output and produces a deterministic risk analysis. It can optionally request an LLM narrative when LLM use is explicitly enabled.
 
-```
-$ terraform show -json plan.tfplan | terraspin
+```text
+$ terraspin --no-ai testdata/plan.json
 
-┌─ Terraspin Plan Analysis ──────────────────────────────────┐
-│  47 resources  ·  terraform 1.7.2                          │
-└────────────────────────────────────────────────────────────┘
+  Overall Risk  CRITICAL (score: 100)
 
-  Overall Risk  CRITICAL (score: 92.5)
-
-  8 to create  ·  12 to update  ·  3 to delete  ·  0 to replace
+  1 to create  ·  1 to update  ·  1 to delete  ·  1 to replace
 
 ──── Critical & High Risk Changes ────────────────────────────
 
-  [CRITICAL 92.5]  aws_db_instance.primary  →  DELETE
-  Blast radius: 6 resources affected
-    ├── aws_lambda_function.api  connection string will break
-    ├── aws_security_group.db    will be deleted as dependent
-    └── module.app.aws_ssm_parameter.db_url  will be deleted
+  [CRITICAL 100.0]  aws_db_instance.primary  →  DELETE
+  [CRITICAL 100.0]  aws_security_group.web  →  REPLACE
 
-  Summary
-  This plan permanently deletes the primary production RDS
-  instance. There is no replacement instance — this is a
-  permanent deletion. The Lambda functions serving production
-  traffic will immediately lose database connectivity.
+  Blast radius summary
+  No cascading dependencies detected
 ```
+
+This example is the current text output for `testdata/plan.json` with `--no-ai`.
 
 ## Features
 
-- **Risk scoring** — deterministic 0–100 score per resource and overall tier (critical/high/medium/low)
-- **Blast radius analysis** — dependency graph traversal to find cascading impact
-- **AI narrative** — plain-English risk briefing via Claude, OpenAI, or local Ollama
+- **Risk scoring** — deterministic 0–100 score per resource and overall tier (`critical`, `high`, `medium`, `low`)
+- **Blast radius analysis** — traverses Terraform root-module expression references
+- **Optional AI narrative** — Claude, OpenAI, or local Ollama when configured or selected with `--llm`
 - **Custom rules** — organization-specific risk policies in `.terraspin.yml`
-- **CI/CD integration** — GitHub Action, PR comments, `--fail-on` gate
-- **MCP server** — run as a Model Context Protocol server for AI coding assistants (Claude Code, Copilot, Cursor)
-- **Multiple formats** — colored terminal, JSON, markdown, compact one-line
-- **Sensitive value redaction** — values marked `sensitive` in plan are redacted before any LLM call
-- **Slack notifications** — webhook alerts on critical/high risk
+- **CI integration** — `--fail-on`, PR/MR comments, and Slack notifications
+- **MCP server** — run as a Model Context Protocol server for AI coding assistants
+- **Formats** — text, JSON, and Markdown
+- **Sensitive value redaction** — values Terraform marks sensitive are redacted before LLM calls and in `diff` output
+
+## Limitations
+
+- Redaction covers only values Terraform marks sensitive. Unmarked `user_data`, tags, ARNs, and account IDs remain visible; a list containing a sensitive element is redacted as one attribute.
+- Blast radius uses expression references from the Terraform root module. It excludes `module.*`, data-source, and `depends_on` relationships.
+- LLM calls use a fixed 30-second timeout and do not retry or rate-limit requests.
+- Custom rules do not support list indexes, wildcards, or regular-expression matching.
+- AWS-specific behavior is currently risk-score multipliers; there is no built-in AWS rule pack.
 
 ## Install
 
+### Homebrew
+
 ```bash
 brew install terraspin/tap/terraspin
+```
+
+### Go
+
+```bash
+go install github.com/terraspin/terraspin/cmd/terraspin@latest
 ```
 
 → [Full installation guide](docs/installation.md)
@@ -53,9 +60,11 @@ brew install terraspin/tap/terraspin
 ## Quick start
 
 ```bash
-terraspin plan.json
-export ANTHROPIC_API_KEY="sk-ant-..."
-terraform plan -json | terraspin
+# Deterministic analysis; no LLM request.
+terraspin --no-ai plan.json
+
+# Explicitly enable Claude for this run.
+ANTHROPIC_API_KEY="..." terraspin --llm claude plan.json
 ```
 
 → [Getting started](docs/getting-started.md)
@@ -65,7 +74,7 @@ terraform plan -json | terraspin
 | Document                                       | Content                                            |
 | ---------------------------------------------- | -------------------------------------------------- |
 | [Getting Started](docs/getting-started.md)     | First analysis, common workflows                   |
-| [Installation](docs/installation.md)           | Homebrew, Go install, binary releases              |
+| [Installation](docs/installation.md)           | Go install and binary releases                     |
 | [Configuration](docs/configuration.md)         | `.terraspin.yml` reference, rules, LLM, Slack      |
 | [CLI Reference](docs/cli.md)                   | Commands, flags, exit codes, MCP server            |
 | [Architecture](docs/architecture.md)           | Pipeline, risk scoring, AI narrative, blast radius |
@@ -75,12 +84,12 @@ terraform plan -json | terraspin
 
 ## How it works
 
-```
+```text
 plan.json → ParsePlan() → RedactSensitive() → ScorePlan() → EvaluateRules()
                                                       ↓
                                           AnalyzeBlastRadius()
                                                       ↓
-                                          BuildAnalysisPrompt() → QueryLLM()
+                           optional BuildAnalysisPrompt() → QueryLLM()
                                                       ↓
                                           FormatText/JSON/Markdown → output
 ```
