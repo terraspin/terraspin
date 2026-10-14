@@ -47,7 +47,7 @@ slack:
 | Config file with `llm` | Yes | Uses its `provider` value |
 | `--llm` flag | Yes | Enables and selects the flag's provider, even without a config file |
 | API key without config file or `--llm` | No | Rule-based narrative |
-| `--llm` without an API key | Attempts the provider request with an empty key | Provider error falls back to rule-based analysis |
+| `--llm` without an API key | Attempts the provider request with an empty key | Provider error falls back to rule-based analysis; a fail-fast no-request check is not implemented yet. |
 
 The default config-file provider is `claude`. The `--model` flag is applied to the provider request; the `llm.model` config field is not yet applied.
 
@@ -67,14 +67,14 @@ These unused config fields are retained for compatibility and should be treated 
 
 ## Data sent to LLM providers
 
-Terraspin sends a static system prompt plus the following plan-derived fields. It does not send raw `Before` or `After` attribute values in either prompt.
+For v0.1.x, the current prompt builders send a static system prompt plus the following plan-derived fields. They do not include raw `Before` or `After` attribute values today. This is observed behavior, not a payload-contract guarantee: it needs a regression test before future prompt refactors.
 
 | Command | Plan-derived fields in the user prompt |
 | --- | --- |
 | Analyze | Overall risk tier and score; counts for critical/high/medium/low; per changed resource: address, tier, action, and affected-resource count when blast radius is nonzero. |
 | Diff | Input labels; Terraform versions; added/removed/modified/unchanged summary; for each non-unchanged resource: address, type, status, and number of changed attributes. |
 
-Values Terraform marks sensitive are redacted before analysis. Values not marked sensitive are not included in the current LLM prompt, but may still appear in local `diff` output; see [Limitations](#limitations).
+Values Terraform marks sensitive are redacted before analysis. Values not marked sensitive are not included in the current v0.1.x LLM prompt, but may still appear in local `diff` output. Resource addresses are sent and can contain internal naming information; treat them as untrusted input because address-based prompt injection is not mitigated yet. See [Limitations](#limitations).
 
 ## Rules
 
@@ -122,5 +122,8 @@ Notifications fire when `SLACK_WEBHOOK_URL` (or the custom environment variable)
 
 - Redaction covers only Terraform-marked sensitive values. Unmarked `user_data`, tags, ARNs, and account IDs remain visible in `diff`; a list containing a sensitive element is redacted as one attribute.
 - Analyze and diff use fixed 30-second LLM timeouts. They do not retry or rate-limit requests.
+- Resource addresses are included in LLM prompts and may reveal internal names. Address-based prompt injection is not mitigated.
+- Prompt payload contents are not protected by an automated contract test yet; treat the documented v0.1.x field list as version-specific.
+- When LLM is enabled without an API key, analyze attempts a request with an empty key before falling back; a fail-fast check is not implemented.
 - The rule engine does not support list indexes, wildcards, or regex matching.
 - The built-in AWS behavior is limited to risk-score multipliers; no AWS rule pack is included.

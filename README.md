@@ -43,6 +43,14 @@ This example is the current text output for `testdata/plan.json` with `--no-ai`.
 
 ## Install
 
+### Homebrew
+
+```bash
+brew install terraspin/tap/terraspin
+```
+
+### Go
+
 ```bash
 go install github.com/terraspin/terraspin/cmd/terraspin@latest
 ```

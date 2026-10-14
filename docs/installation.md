@@ -1,5 +1,13 @@
 # Installation
 
+## Homebrew
+
+```bash
+brew install terraspin/tap/terraspin
+```
+
+The public `terraspin/homebrew-tap` repository contains `terraspin.rb` for release `v0.1.0`.
+
 ## Go install
 
 ```bash
@@ -18,7 +26,7 @@ Download pre-built binaries from [GitHub Releases](https://github.com/terraspin/
 terraspin version
 ```
 
-The command prints the version and, for release builds, commit/build metadata.
+The command prints the version and, for release builds, commit/build metadata. A binary installed with `go install ...@latest` may report a `dev` version because it is not built with release linker metadata.
 
 ## Environment variables
 
