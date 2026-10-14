@@ -135,8 +135,8 @@ func TestHandleGetBlastRadius_returnsForKnownResource(t *testing.T) {
 
 	req := mcp.CallToolRequest{}
 	req.Params.Arguments = map[string]any{
-		"plan_json":         planJSON,
-		"resource_address":  "aws_db_instance.p",
+		"plan_json":        planJSON,
+		"resource_address": "aws_db_instance.p",
 	}
 
 	result, err := handleGetBlastRadius(context.Background(), req)
@@ -207,8 +207,8 @@ func TestHandleExplainChange_returnsDetails(t *testing.T) {
 
 	req := mcp.CallToolRequest{}
 	req.Params.Arguments = map[string]any{
-		"plan_json":         planJSON,
-		"resource_address":  "aws_s3_bucket.logs",
+		"plan_json":        planJSON,
+		"resource_address": "aws_s3_bucket.logs",
 	}
 
 	result, err := handleExplainChange(context.Background(), req)
@@ -224,6 +224,37 @@ func TestHandleExplainChange_returnsDetails(t *testing.T) {
 	}
 	if !strings.Contains(text, "created") {
 		t.Error("missing create description")
+	}
+}
+
+func TestHandleExplainChange_redactsSensitiveLists(t *testing.T) {
+	planJSON := `{
+		"format_version": "1.2",
+		"terraform_version": "1.0",
+		"resource_changes": [{
+			"address": "example.test", "mode": "managed", "type": "example", "name": "test",
+			"change": {
+				"actions": ["update"],
+				"before": {"tokens": ["synthetic-before"]},
+				"after": {"tokens": ["synthetic-after"]},
+				"before_sensitive": {"tokens": [true]},
+				"after_sensitive": {"tokens": [true]}
+			}
+		}]
+	}`
+	req := mcp.CallToolRequest{}
+	req.Params.Arguments = map[string]any{
+		"plan_json":        planJSON,
+		"resource_address": "example.test",
+	}
+
+	result, err := handleExplainChange(context.Background(), req)
+	if err != nil {
+		t.Fatal(err)
+	}
+	text := result.Content[0].(mcp.TextContent).Text
+	if strings.Contains(text, "synthetic-before") || strings.Contains(text, "synthetic-after") {
+		t.Fatal("MCP response contains a synthetic sensitive value")
 	}
 }
 
@@ -364,8 +395,8 @@ func TestHandleSuggestRollback_includesFailurePoint(t *testing.T) {
 
 	req := mcp.CallToolRequest{}
 	req.Params.Arguments = map[string]any{
-		"plan_json":      planJSON,
-		"failure_point":  "aws_db_instance.p",
+		"plan_json":     planJSON,
+		"failure_point": "aws_db_instance.p",
 	}
 
 	result, err := handleSuggestRollback(context.Background(), req)

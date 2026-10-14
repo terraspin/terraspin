@@ -1,0 +1,44 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.7.2",
+  "resource_changes": [
+    {
+      "address": "example_sensitive_resource.test",
+      "mode": "managed",
+      "type": "example_sensitive_resource",
+      "name": "test",
+      "provider_name": "example",
+      "change": {
+        "actions": ["update"],
+        "before": {
+          "api_token": "synthetic-token-before-a",
+          "unchanged_token": "synthetic-unchanged-token",
+          "tokens": ["synthetic-list-before-a", "synthetic-list-unchanged"],
+          "connections": [{"auth": {"tokens": ["synthetic-nested-before-a"]}}],
+          "secret_tree": {"key": "synthetic-tree-before-a", "children": ["synthetic-child-before-a"]}
+        },
+        "after": {
+          "api_token": "synthetic-token-after-a",
+          "unchanged_token": "synthetic-unchanged-token",
+          "tokens": ["synthetic-list-after-a", "synthetic-list-unchanged"],
+          "connections": [{"auth": {"tokens": ["synthetic-nested-after-a"]}}],
+          "secret_tree": {"key": "synthetic-tree-after-a", "children": ["synthetic-child-after-a"]}
+        },
+        "before_sensitive": {
+          "api_token": true,
+          "unchanged_token": true,
+          "tokens": [true, true],
+          "connections": [{"auth": {"tokens": [true]}}],
+          "secret_tree": true
+        },
+        "after_sensitive": {
+          "api_token": true,
+          "unchanged_token": true,
+          "tokens": [true, true],
+          "connections": [{"auth": {"tokens": [true]}}],
+          "secret_tree": true
+        }
+      }
+    }
+  ]
+}
