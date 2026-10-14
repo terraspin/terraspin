@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -120,6 +121,74 @@ func TestCLISensitiveValuesNeverReachOutput(t *testing.T) {
 				t.Fatal("diff output must retain the changed sensitive attribute with a redaction marker")
 			}
 		})
+	}
+}
+
+func TestCLIDiffAddedAndRemovedSensitiveResourcesAreRedacted(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(t.TempDir(), "terraspin")
+	build := exec.Command("go", "build", "-o", binary, ".")
+	build.Dir = filepath.Join(repoRoot, "cmd", "terraspin")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build CLI: %v\n%s", err, output)
+	}
+
+	plans := t.TempDir()
+	removed := syntheticPlan(t, []any{syntheticResource("example.removed", "delete", "synthetic-removed-value", true)})
+	added := syntheticPlan(t, []any{syntheticResource("example.added", "create", "synthetic-added-value", true)})
+	planA := filepath.Join(plans, "plan-a.json")
+	planB := filepath.Join(plans, "plan-b.json")
+	if err := os.WriteFile(planA, removed, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(planB, added, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, format := range []string{"text", "json", "markdown"} {
+		t.Run(format, func(t *testing.T) {
+			cmd := exec.Command(binary, "diff", "--no-ai", "--format", format, planA, planB)
+			cmd.Dir = t.TempDir()
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("diff: %v\n%s", err, output)
+			}
+			if strings.Contains(string(output), "synthetic-removed-value") || strings.Contains(string(output), "synthetic-added-value") {
+				t.Fatal("diff output contains a synthetic sensitive value")
+			}
+		})
+	}
+}
+
+func syntheticPlan(t *testing.T, changes []any) []byte {
+	t.Helper()
+	data, err := json.Marshal(map[string]any{
+		"format_version": "1.2", "terraform_version": "1.7.2", "resource_changes": changes,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return data
+}
+
+func syntheticResource(address, action, value string, sensitive bool) map[string]any {
+	change := map[string]any{"actions": []string{action}}
+	if action == "create" {
+		change["before"] = nil
+		change["after"] = map[string]any{"credential": value}
+		change["before_sensitive"] = map[string]any{}
+		change["after_sensitive"] = map[string]any{"credential": sensitive}
+	} else {
+		change["before"] = map[string]any{"credential": value}
+		change["after"] = nil
+		change["before_sensitive"] = map[string]any{"credential": sensitive}
+		change["after_sensitive"] = map[string]any{}
+	}
+	return map[string]any{
+		"address": address, "mode": "managed", "type": "example", "name": "test", "change": change,
 	}
 }
 

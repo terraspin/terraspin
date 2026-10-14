@@ -1,11 +1,106 @@
 package diff
 
 import (
+	"encoding/json"
 	"strings"
 	"testing"
 
+	"github.com/terraspin/terraspin/internal/ai"
 	"github.com/terraspin/terraspin/internal/parser"
 )
+
+func TestCompareRedactsSensitiveValues(t *testing.T) {
+	tests := []struct {
+		name             string
+		beforeA, beforeB map[string]any
+		sensitiveA       map[string]any
+		sensitiveB       map[string]any
+		path             string
+		redacted         bool
+	}{
+		{
+			name: "changed attribute", beforeA: map[string]any{"token": "synthetic-a"}, beforeB: map[string]any{"token": "synthetic-b"},
+			sensitiveA: map[string]any{"token": true}, sensitiveB: map[string]any{"token": true}, path: "token", redacted: true,
+		},
+		{
+			name: "unchanged attribute", beforeA: map[string]any{"token": "synthetic-same", "visible": "a"}, beforeB: map[string]any{"token": "synthetic-same", "visible": "b"},
+			sensitiveA: map[string]any{"token": true}, sensitiveB: map[string]any{"token": true}, path: "visible", redacted: false,
+		},
+		{
+			name: "partially sensitive list", beforeA: map[string]any{"items": []any{"visible", "synthetic-a"}}, beforeB: map[string]any{"items": []any{"visible", "synthetic-b"}},
+			sensitiveA: map[string]any{"items": []any{false, true}}, sensitiveB: map[string]any{"items": []any{false, true}}, path: "items", redacted: true,
+		},
+		{
+			name: "sensitive subtree", beforeA: map[string]any{"secret_tree": map[string]any{"key": "synthetic-a"}}, beforeB: map[string]any{"secret_tree": map[string]any{"key": "synthetic-b"}},
+			sensitiveA: map[string]any{"secret_tree": true}, sensitiveB: map[string]any{"secret_tree": true}, path: "secret_tree.key", redacted: true,
+		},
+		{
+			name: "different list lengths", beforeA: map[string]any{"items": []any{"visible", "synthetic-a"}}, beforeB: map[string]any{"items": []any{"visible", "synthetic-b", "synthetic-c"}},
+			sensitiveA: map[string]any{"items": []any{false, true}}, sensitiveB: map[string]any{"items": []any{false, true, true}}, path: "items", redacted: true,
+		},
+		{
+			name: "marker only on one side", beforeA: map[string]any{"credential": "synthetic-a"}, beforeB: map[string]any{"credential": "synthetic-b"},
+			sensitiveA: map[string]any{"credential": true}, sensitiveB: nil, path: "credential", redacted: true,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			result, err := Compare(
+				sensitivePlan(t, tc.beforeA, tc.sensitiveA),
+				sensitivePlan(t, tc.beforeB, tc.sensitiveB),
+				"a", "b",
+			)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if result.Summary.Modified != 1 {
+				t.Fatalf("modified = %d, want 1", result.Summary.Modified)
+			}
+			change := findChange(t, result.Diffs[0].Changes, tc.path)
+			if tc.redacted && (change.OldValue != ai.SensitiveRedacted || change.NewValue != ai.SensitiveRedacted) {
+				t.Fatal("sensitive attribute change was not redacted")
+			}
+			if !tc.redacted && (change.OldValue == ai.SensitiveRedacted || change.NewValue == ai.SensitiveRedacted) {
+				t.Fatal("non-sensitive attribute change was redacted")
+			}
+			if _, ok := tc.beforeA["token"]; ok && result.Diffs[0].Old.Before["token"] != ai.SensitiveRedacted {
+				t.Fatal("unchanged sensitive value was not redacted in old resource")
+			}
+		})
+	}
+}
+
+func sensitivePlan(t *testing.T, before, sensitive map[string]any) []byte {
+	t.Helper()
+	plan := map[string]any{
+		"format_version":    "1.2",
+		"terraform_version": "1.7.2",
+		"resource_changes": []any{map[string]any{
+			"address": "example.sensitive", "mode": "managed", "type": "example", "name": "sensitive",
+			"change": map[string]any{
+				"actions": []string{"update"}, "before": before, "after": before,
+				"before_sensitive": sensitive, "after_sensitive": sensitive,
+			},
+		}},
+	}
+	data, err := json.Marshal(plan)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return data
+}
+
+func findChange(t *testing.T, changes []AttributeDiff, path string) AttributeDiff {
+	t.Helper()
+	for _, change := range changes {
+		if change.Path == path {
+			return change
+		}
+	}
+	t.Fatalf("missing change at %q", path)
+	return AttributeDiff{}
+}
 
 func TestCompareASTs_detectsRemovedResources(t *testing.T) {
 	planA := &parser.PlanAST{
@@ -51,8 +146,8 @@ func TestCompareASTs_detectsModifiedAttributes(t *testing.T) {
 				Address: "aws_instance.web",
 				Type:    "aws_instance",
 				Action:  parser.ActionUpdate,
-				Before: map[string]any{"instance_type": "t3.micro"},
-				After:  map[string]any{"instance_type": "t3.micro"},
+				Before:  map[string]any{"instance_type": "t3.micro"},
+				After:   map[string]any{"instance_type": "t3.micro"},
 			},
 		},
 	}
@@ -62,8 +157,8 @@ func TestCompareASTs_detectsModifiedAttributes(t *testing.T) {
 				Address: "aws_instance.web",
 				Type:    "aws_instance",
 				Action:  parser.ActionUpdate,
-				Before: map[string]any{"instance_type": "t3.large"},
-				After:  map[string]any{"instance_type": "t3.large"},
+				Before:  map[string]any{"instance_type": "t3.large"},
+				After:   map[string]any{"instance_type": "t3.large"},
 			},
 		},
 	}
