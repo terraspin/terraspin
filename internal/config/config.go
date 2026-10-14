@@ -81,7 +81,7 @@ func DefaultConfig() *Config {
 }
 
 // Load reads and validates a .terraspin.yml file.
-// Returns bare config (version only) if file doesn't exist.
+// Returns a config with LLM disabled when the file or its llm block is absent.
 func Load(path string) (*Config, error) {
 	if path == "" {
 		path = ".terraspin.yml"
@@ -97,6 +97,17 @@ func Load(path string) (*Config, error) {
 	if err := yaml.Unmarshal(data, cfg); err != nil {
 		return nil, fmt.Errorf("config: parse %s: %w", path, err)
 	}
+
+	var fields struct {
+		LLM *yaml.Node `yaml:"llm"`
+	}
+	if err := yaml.Unmarshal(data, &fields); err != nil {
+		return nil, fmt.Errorf("config: parse %s: %w", path, err)
+	}
+	if fields.LLM == nil {
+		cfg.LLM = nil
+	}
+
 	if err := cfg.validate(); err != nil {
 		return nil, fmt.Errorf("config: validate %s: %w", path, err)
 	}

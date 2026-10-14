@@ -338,6 +338,10 @@ func buildRuleNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast ma
 }
 
 func buildLLMNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[string]*analyzer.BlastRadius, cfg *config.Config, llmModel, ollamaHost string) *ai.Narrative {
+	if cfg == nil || cfg.LLM == nil {
+		return buildRuleNarrative(ast, score, blast)
+	}
+
 	provider := cfg.LLM.Provider
 	changes := make([]ai.PlanChangeSummary, 0, len(score.ResourceScores))
 	for _, rs := range score.ResourceScores {

@@ -7,7 +7,7 @@ import (
 )
 
 func TestLoad_DefaultsWhenFileMissing(t *testing.T) {
-	cfg, err := Load("/nonexistent/.terraspin.yml")
+	cfg, err := Load(filepath.Join(t.TempDir(), ".terraspin.yml"))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -16,6 +16,22 @@ func TestLoad_DefaultsWhenFileMissing(t *testing.T) {
 	}
 	if cfg.LLM != nil {
 		t.Errorf("llm should be nil when file missing, got %v", cfg.LLM)
+	}
+}
+
+func TestLoad_ConfigWithoutLLMLeavesLLMDisabled(t *testing.T) {
+	dir := t.TempDir()
+	path := filepath.Join(dir, ".terraspin.yml")
+	if err := os.WriteFile(path, []byte("version: 1\nrisk:\n  fail_on: high\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	cfg, err := Load(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.LLM != nil {
+		t.Errorf("llm should be nil when config has no llm block, got %v", cfg.LLM)
 	}
 }
 
