@@ -19,19 +19,28 @@ func TestLoad_DefaultsWhenFileMissing(t *testing.T) {
 	}
 }
 
-func TestLoad_ConfigWithoutLLMLeavesLLMDisabled(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, ".terraspin.yml")
-	if err := os.WriteFile(path, []byte("version: 1\nrisk:\n  fail_on: high\n"), 0644); err != nil {
-		t.Fatal(err)
-	}
+func TestLoad_ConfigWithoutLLMUsesDefaults(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		content string
+	}{
+		{name: "version only", content: "version: 1\n"},
+		{name: "risk config", content: "version: 1\nrisk:\n  fail_on: high\n"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), ".terraspin.yml")
+			if err := os.WriteFile(path, []byte(tc.content), 0644); err != nil {
+				t.Fatal(err)
+			}
 
-	cfg, err := Load(path)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if cfg.LLM != nil {
-		t.Errorf("llm should be nil when config has no llm block, got %v", cfg.LLM)
+			cfg, err := Load(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if cfg.LLM == nil || *cfg.LLM != *DefaultConfig().LLM {
+				t.Errorf("llm = %#v, want defaults %#v", cfg.LLM, DefaultConfig().LLM)
+			}
+		})
 	}
 }
 
