@@ -6,6 +6,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/terraspin/terraspin/internal/ai"
 	"github.com/terraspin/terraspin/internal/parser"
 )
 
@@ -21,7 +22,73 @@ func Compare(dataA, dataB []byte, labelA, labelB string) (*DiffResult, error) {
 		return nil, fmt.Errorf("parse plan B: %w", err)
 	}
 
-	return CompareASTs(astA, astB, labelA, labelB), nil
+	result := CompareASTs(astA, astB, labelA, labelB)
+	ai.RedactSensitive(astA)
+	ai.RedactSensitive(astB)
+	redactSensitiveChanges(result)
+	return result, nil
+}
+
+func redactSensitiveChanges(result *DiffResult) {
+	for i := range result.Diffs {
+		resource := &result.Diffs[i]
+		for j := range resource.Changes {
+			change := &resource.Changes[j]
+			if pathIsSensitive(change.Path, resource.Old, resource.New) {
+				change.OldValue = ai.SensitiveRedacted
+				change.NewValue = ai.SensitiveRedacted
+			}
+		}
+	}
+}
+
+func pathIsSensitive(path string, resources ...*parser.ResourceChange) bool {
+	parts := strings.Split(path, ".")
+	for _, resource := range resources {
+		if resource == nil {
+			continue
+		}
+		if markerIsSensitive(resource.BeforeSensitive, parts) || markerIsSensitive(resource.AfterSensitive, parts) {
+			return true
+		}
+	}
+	return false
+}
+
+func markerIsSensitive(marker any, parts []string) bool {
+	switch m := marker.(type) {
+	case bool:
+		return m
+	case map[string]any:
+		if len(parts) == 0 {
+			return containsSensitiveMarker(m)
+		}
+		child, ok := m[parts[0]]
+		return ok && markerIsSensitive(child, parts[1:])
+	case []any:
+		return containsSensitiveMarker(m)
+	}
+	return false
+}
+
+func containsSensitiveMarker(marker any) bool {
+	switch m := marker.(type) {
+	case bool:
+		return m
+	case map[string]any:
+		for _, child := range m {
+			if containsSensitiveMarker(child) {
+				return true
+			}
+		}
+	case []any:
+		for _, child := range m {
+			if containsSensitiveMarker(child) {
+				return true
+			}
+		}
+	}
+	return false
 }
 
 // CompareASTs compares two parsed plans and returns a structured diff.
@@ -32,10 +99,10 @@ func CompareASTs(astA, astB *parser.PlanAST, labelA, labelB string) *DiffResult 
 	allAddrs := collectAddrs(idxA, idxB)
 
 	result := &DiffResult{
-		LabelA:    labelA,
-		LabelB:    labelB,
-		VersionA:  astA.TerraformVersion,
-		VersionB:  astB.TerraformVersion,
+		LabelA:   labelA,
+		LabelB:   labelB,
+		VersionA: astA.TerraformVersion,
+		VersionB: astB.TerraformVersion,
 	}
 
 	for _, addr := range allAddrs {
@@ -212,8 +279,6 @@ func dedupChanges(changes []AttributeDiff) []AttributeDiff {
 	}
 	return out
 }
-
-
 
 // DiffSummaryText returns a one-line summary string for the diff.
 func (r *DiffResult) DiffSummaryText() string {

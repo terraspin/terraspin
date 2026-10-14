@@ -141,13 +141,13 @@ func TestRedactSensitive_multipleResources(t *testing.T) {
 	ast := &parser.PlanAST{
 		Changes: []parser.ResourceChange{
 			{
-				Address: "safe",
-				Before:  map[string]any{"x": "keep"},
+				Address:         "safe",
+				Before:          map[string]any{"x": "keep"},
 				BeforeSensitive: map[string]any{},
 			},
 			{
-				Address: "leaky",
-				Before: map[string]any{"token": "abc"},
+				Address:         "leaky",
+				Before:          map[string]any{"token": "abc"},
 				BeforeSensitive: map[string]any{"token": true},
 			},
 		},
@@ -203,6 +203,41 @@ func TestRedactSensitive_integration(t *testing.T) {
 	}
 	if ast.Changes[0].Before["engine"] != "postgres" {
 		t.Error("integration: non-sensitive field modified")
+	}
+}
+
+func TestRedactSensitive_listsAndSensitiveSubtree(t *testing.T) {
+	ast := &parser.PlanAST{Changes: []parser.ResourceChange{{
+		After: map[string]any{
+			"tokens": []any{"synthetic-list-value", "synthetic-list-value-2"},
+			"connections": []any{map[string]any{
+				"auth": map[string]any{"tokens": []any{"synthetic-nested-list-value"}},
+			}},
+			"secret_tree": map[string]any{
+				"key": "synthetic-subtree-value", "children": []any{"synthetic-subtree-child"},
+			},
+		},
+		AfterSensitive: map[string]any{
+			"tokens": []any{true, true},
+			"connections": []any{map[string]any{
+				"auth": map[string]any{"tokens": []any{true}},
+			}},
+			"secret_tree": true,
+		},
+	}}}
+
+	RedactSensitive(ast)
+
+	after := ast.Changes[0].After
+	if got := after["tokens"].([]any)[0]; got != redacted {
+		t.Error("list value was not redacted")
+	}
+	nested := after["connections"].([]any)[0].(map[string]any)["auth"].(map[string]any)["tokens"].([]any)[0]
+	if nested != redacted {
+		t.Error("nested list value was not redacted")
+	}
+	if got := after["secret_tree"]; got != redacted {
+		t.Error("sensitive subtree was not redacted")
 	}
 }
 

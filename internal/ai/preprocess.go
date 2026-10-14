@@ -22,26 +22,36 @@ func RedactSensitive(ast *parser.PlanAST) {
 	}
 }
 
-// redactMap walks the sensitive mirror map and replaces values in data
-// at every path where the sensitive leaf is true.
+// redactMap walks the sensitive mirror and replaces marked values in data.
 func redactMap(data, sensitive map[string]any) {
 	if data == nil || sensitive == nil {
 		return
 	}
-	for k, sv := range sensitive {
-		dv, ok := data[k]
-		if !ok {
-			continue
+	for k, marker := range sensitive {
+		if value, ok := data[k]; ok {
+			data[k] = redactValue(value, marker)
 		}
-		switch s := sv.(type) {
-		case map[string]any:
-			if dm, ok := dv.(map[string]any); ok {
-				redactMap(dm, s)
-			}
-		case bool:
-			if s {
-				data[k] = redacted
+	}
+}
+
+func redactValue(value, marker any) any {
+	switch m := marker.(type) {
+	case bool:
+		if m {
+			return redacted
+		}
+	case map[string]any:
+		if data, ok := value.(map[string]any); ok {
+			redactMap(data, m)
+		}
+	case []any:
+		if data, ok := value.([]any); ok {
+			for i, child := range m {
+				if i < len(data) {
+					data[i] = redactValue(data[i], child)
+				}
 			}
 		}
 	}
+	return value
 }

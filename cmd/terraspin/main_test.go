@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -50,7 +51,7 @@ func TestCLIWithoutConfigUsesRuleBasedNarrative(t *testing.T) {
 		t.Fatalf("build CLI: %v\n%s", err, output)
 	}
 
-	for _, fixture := range []string{"plan_empty.json", "plan.json", "plan_with_modules.json", "plan_with_sensitive.json"} {
+	for _, fixture := range []string{"plan_empty.json", "plan.json", "plan_with_modules.json", "plan_with_sensitive.json", "plan_with_sensitive_collections_a.json", "plan_with_sensitive_collections_b.json"} {
 		for _, format := range []string{"text", "json", "markdown"} {
 			t.Run(fixture+"/"+format, func(t *testing.T) {
 				cmd := exec.Command(binary, "--format", format, filepath.Join(repoRoot, "testdata", fixture))
@@ -65,6 +66,129 @@ func TestCLIWithoutConfigUsesRuleBasedNarrative(t *testing.T) {
 				}
 			})
 		}
+	}
+}
+
+func TestCLISensitiveValuesNeverReachOutput(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(t.TempDir(), "terraspin")
+	build := exec.Command("go", "build", "-o", binary, ".")
+	build.Dir = filepath.Join(repoRoot, "cmd", "terraspin")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build CLI: %v\n%s", err, output)
+	}
+
+	planA := filepath.Join(repoRoot, "testdata", "plan_with_sensitive_collections_a.json")
+	planB := filepath.Join(repoRoot, "testdata", "plan_with_sensitive_collections_b.json")
+	secrets := []string{
+		"synthetic-token-before-a", "synthetic-token-after-a", "synthetic-token-before-b", "synthetic-token-after-b",
+		"synthetic-unchanged-token", "synthetic-list-before-a", "synthetic-list-after-a", "synthetic-list-before-b", "synthetic-list-after-b",
+		"synthetic-list-unchanged", "synthetic-nested-before-a", "synthetic-nested-after-a", "synthetic-nested-before-b", "synthetic-nested-after-b",
+		"synthetic-tree-before-a", "synthetic-tree-after-a", "synthetic-tree-before-b", "synthetic-tree-after-b",
+		"synthetic-child-before-a", "synthetic-child-after-a", "synthetic-child-before-b", "synthetic-child-after-b",
+	}
+
+	for _, format := range []string{"text", "json", "markdown"} {
+		t.Run(format, func(t *testing.T) {
+			analyze := exec.Command(binary, "--no-ai", "--format", format, planA)
+			analyze.Dir = t.TempDir()
+			analyze.Env = append(os.Environ(), "ANTHROPIC_API_KEY=", "OPENAI_API_KEY=")
+			analyzeOutput, err := analyze.CombinedOutput()
+			if err != nil {
+				t.Fatalf("analyze: %v\n%s", err, analyzeOutput)
+			}
+			for _, secret := range secrets {
+				if strings.Contains(string(analyzeOutput), secret) {
+					t.Fatal("analyze output contains a synthetic sensitive value")
+				}
+			}
+
+			diffCmd := exec.Command(binary, "diff", "--no-ai", "--format", format, planA, planB)
+			diffCmd.Dir = t.TempDir()
+			diffOutput, err := diffCmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("diff: %v\n%s", err, diffOutput)
+			}
+			for _, secret := range secrets {
+				if strings.Contains(string(diffOutput), secret) {
+					t.Fatal("diff output contains a synthetic sensitive value")
+				}
+			}
+			if !strings.Contains(string(diffOutput), "api_token") || !strings.Contains(string(diffOutput), ai.SensitiveRedacted) {
+				t.Fatal("diff output must retain the changed sensitive attribute with a redaction marker")
+			}
+		})
+	}
+}
+
+func TestCLIDiffAddedAndRemovedSensitiveResourcesAreRedacted(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(t.TempDir(), "terraspin")
+	build := exec.Command("go", "build", "-o", binary, ".")
+	build.Dir = filepath.Join(repoRoot, "cmd", "terraspin")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build CLI: %v\n%s", err, output)
+	}
+
+	plans := t.TempDir()
+	removed := syntheticPlan(t, []any{syntheticResource("example.removed", "delete", "synthetic-removed-value", true)})
+	added := syntheticPlan(t, []any{syntheticResource("example.added", "create", "synthetic-added-value", true)})
+	planA := filepath.Join(plans, "plan-a.json")
+	planB := filepath.Join(plans, "plan-b.json")
+	if err := os.WriteFile(planA, removed, 0644); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(planB, added, 0644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, format := range []string{"text", "json", "markdown"} {
+		t.Run(format, func(t *testing.T) {
+			cmd := exec.Command(binary, "diff", "--no-ai", "--format", format, planA, planB)
+			cmd.Dir = t.TempDir()
+			output, err := cmd.CombinedOutput()
+			if err != nil {
+				t.Fatalf("diff: %v\n%s", err, output)
+			}
+			if strings.Contains(string(output), "synthetic-removed-value") || strings.Contains(string(output), "synthetic-added-value") {
+				t.Fatal("diff output contains a synthetic sensitive value")
+			}
+		})
+	}
+}
+
+func syntheticPlan(t *testing.T, changes []any) []byte {
+	t.Helper()
+	data, err := json.Marshal(map[string]any{
+		"format_version": "1.2", "terraform_version": "1.7.2", "resource_changes": changes,
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return data
+}
+
+func syntheticResource(address, action, value string, sensitive bool) map[string]any {
+	change := map[string]any{"actions": []string{action}}
+	if action == "create" {
+		change["before"] = nil
+		change["after"] = map[string]any{"credential": value}
+		change["before_sensitive"] = map[string]any{}
+		change["after_sensitive"] = map[string]any{"credential": sensitive}
+	} else {
+		change["before"] = map[string]any{"credential": value}
+		change["after"] = nil
+		change["before_sensitive"] = map[string]any{"credential": sensitive}
+		change["after_sensitive"] = map[string]any{}
+	}
+	return map[string]any{
+		"address": address, "mode": "managed", "type": "example", "name": "test", "change": change,
 	}
 }
 
