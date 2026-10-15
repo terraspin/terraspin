@@ -30,7 +30,7 @@ This is a code-derived model of Terraspin v0.1.x, not a guarantee. **[VERIFIED]*
 
 - **[VERIFIED]** Values that Terraform does not mark sensitive remain visible in local diff output (`internal/ai/preprocess.go:25-52`; `cmd/terraspin/diff.go:194-226`).
 - **[VERIFIED]** Resource addresses enter analyze and diff prompts (`cmd/terraspin/main.go:350-360`; `internal/diff/diff.go:314-322`).
-- **[VERIFIED]** Release artifacts are currently unsigned: the configured checksum remains active while the only `signs` block is commented out (`.goreleaser.yml:33-36`, `.goreleaser.yml:71-81`).
+- **[VERIFIED]** Release artifacts are currently unsigned: the configured checksum remains active while the only `signs` block is commented out (`.goreleaser.yml:40-41`, `.goreleaser.yml:71-81`).
 
 ## Blast-Radius Limits
 
