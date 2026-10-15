@@ -37,7 +37,7 @@ This example is the current text output for `testdata/plan.json` with `--no-ai`.
 
 - Redaction covers only values Terraform marks sensitive. Unmarked `user_data`, tags, ARNs, and account IDs remain visible; a list containing a sensitive element is redacted as one attribute.
 - Blast radius uses expression references from the Terraform root module. It excludes `module.*`, data-source, and `depends_on` relationships.
-- LLM calls use a fixed 30-second timeout and do not retry or rate-limit requests.
+- LLM calls use `llm.timeout` per attempt and retry network, timeout, HTTP 429, and 5xx failures. With default settings, the worst-case wait is about 110 seconds; successful requests stop sooner.
 - Custom rules do not support list indexes, wildcards, or regular-expression matching.
 - AWS-specific behavior is currently risk-score multipliers; there is no built-in AWS rule pack.
 
