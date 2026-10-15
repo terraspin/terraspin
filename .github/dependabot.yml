@@ -7,6 +7,10 @@ updates:
     commit-message:
       prefix: "chore(deps)"
     open-pull-requests-limit: 5
+    # Menunggu evaluasi update mayor mcp-go.
+    ignore:
+      - dependency-name: github.com/mark3labs/mcp-go
+        update-types: ["version-update:semver-major"]
 
   - package-ecosystem: github-actions
     directory: /
