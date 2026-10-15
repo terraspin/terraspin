@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -206,6 +207,246 @@ func syntheticResource(address, action, value string, sensitive bool) map[string
 	}
 	return map[string]any{
 		"address": address, "mode": "managed", "type": "example", "name": "test", "change": change,
+	}
+}
+
+func TestCLIUsesExplicitConfigModel(t *testing.T) {
+	models := make(chan string, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		var body struct {
+			Model string `json:"model"`
+		}
+		if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+			t.Fatal(err)
+		}
+		models <- body.Model
+		_, _ = w.Write([]byte(`{"content":[{"text":"{\"summary\":\"LLM narrative\",\"risk_assessment\":\"low\",\"recommendations\":[],\"rollback_strategy\":\"none\"}"}]}`))
+	}))
+	defer server.Close()
+
+	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(t.TempDir(), "terraspin")
+	build := exec.Command("go", "build", "-o", binary, ".")
+	build.Dir = filepath.Join(repoRoot, "cmd", "terraspin")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build CLI: %v\n%s", err, output)
+	}
+	workdir := t.TempDir()
+	if err := os.WriteFile(filepath.Join(workdir, ".terraspin.yml"), []byte("version: 1\nllm:\n  provider: claude\n  model: configured-gateway-model\n  timeout: 1s\n  max_retries: 0\n  fallback_to_rules: false\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cmd := exec.Command(binary, filepath.Join(repoRoot, "testdata", "plan_empty.json"))
+	cmd.Dir = workdir
+	cmd.Env = append(os.Environ(), "ANTHROPIC_API_KEY=test-api-key", "ANTHROPIC_BASE_URL="+server.URL)
+	if output, err := cmd.CombinedOutput(); err != nil {
+		t.Fatalf("run CLI: %v\n%s", err, output)
+	}
+	if got := <-models; got != "configured-gateway-model" {
+		t.Errorf("model=%q, want configured-gateway-model", got)
+	}
+}
+
+func TestCLIPayloadsExcludeAttributeValuesIncludingSystem(t *testing.T) {
+	bodies := make(chan []byte, 2)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		raw, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Error(err)
+			w.WriteHeader(http.StatusInternalServerError)
+			return
+		}
+		bodies <- raw
+		_, _ = w.Write([]byte(`{"content":[{"text":"{\"summary\":\"LLM narrative\",\"risk_assessment\":\"low\",\"recommendations\":[],\"rollback_strategy\":\"none\"}"}]}`))
+	}))
+	defer server.Close()
+
+	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(t.TempDir(), "terraspin")
+	build := exec.Command("go", "build", "-o", binary, ".")
+	build.Dir = filepath.Join(repoRoot, "cmd", "terraspin")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build CLI: %v\n%s", err, output)
+	}
+	workdir := t.TempDir()
+	planA := filepath.Join(workdir, "a.json")
+	planB := filepath.Join(workdir, "b.json")
+	for path, values := range map[string][2]string{
+		planA: {"SYNTHETIC_SENSITIVE_A", "SYNTHETIC_UNMARKED_A"},
+		planB: {"SYNTHETIC_SENSITIVE_B", "SYNTHETIC_UNMARKED_B"},
+	} {
+		plan := syntheticPayloadPlan(t, values[0], values[1])
+		if err := os.WriteFile(path, plan, 0644); err != nil {
+			t.Fatal(err)
+		}
+	}
+	if err := os.WriteFile(filepath.Join(workdir, ".terraspin.yml"), []byte("version: 1\nllm:\n  provider: claude\n  timeout: 1s\n  max_retries: 0\n  fallback_to_rules: false\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	for _, args := range [][]string{{planA}, {"diff", planA, planB}} {
+		cmd := exec.Command(binary, args...)
+		cmd.Dir = workdir
+		cmd.Env = append(os.Environ(), "ANTHROPIC_API_KEY=payload-placeholder", "ANTHROPIC_BASE_URL="+server.URL)
+		if output, err := cmd.CombinedOutput(); err != nil {
+			t.Fatalf("run %v: %v\n%s", args, err, output)
+		}
+	}
+	for _, command := range []string{"analyze", "diff"} {
+		raw := <-bodies
+		if strings.Contains(string(raw), "SYNTHETIC_") {
+			t.Fatalf("%s payload contains an attribute value: %s", command, raw)
+		}
+		var payload struct {
+			System string `json:"system"`
+		}
+		if err := json.Unmarshal(raw, &payload); err != nil {
+			t.Fatal(err)
+		}
+		if payload.System != ai.SystemPrompt {
+			t.Fatalf("%s system prompt changed or missing", command)
+		}
+	}
+}
+
+func syntheticPayloadPlan(t *testing.T, secret, plain string) []byte {
+	t.Helper()
+	data, err := json.Marshal(map[string]any{
+		"format_version": "1.2", "terraform_version": "1.7.2",
+		"resource_changes": []any{map[string]any{
+			"address": "example_payload.test", "mode": "managed", "type": "example_payload", "name": "test",
+			"change": map[string]any{
+				"actions":          []string{"update"},
+				"before":           map[string]any{"secret": secret + "-before", "label": plain + "-before"},
+				"after":            map[string]any{"secret": secret + "-after", "label": plain + "-after"},
+				"before_sensitive": map[string]any{"secret": true}, "after_sensitive": map[string]any{"secret": true},
+			},
+		}},
+	})
+	if err != nil {
+		t.Fatal(err)
+	}
+	return data
+}
+
+func TestCLIDiffUsesLLMConfigForFallback(t *testing.T) {
+	var requests int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		_, _ = w.Write([]byte(`{"content":[{"text":"{\"summary\":\"LLM narrative\",\"recommendations\":[]}"}]}`))
+	}))
+	defer server.Close()
+
+	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(t.TempDir(), "terraspin")
+	build := exec.Command("go", "build", "-o", binary, ".")
+	build.Dir = filepath.Join(repoRoot, "cmd", "terraspin")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build CLI: %v\n%s", err, output)
+	}
+	planA := filepath.Join(repoRoot, "testdata", "plan_with_sensitive_collections_a.json")
+	planB := filepath.Join(repoRoot, "testdata", "plan_with_sensitive_collections_b.json")
+
+	for _, tc := range []struct {
+		name        string
+		config      string
+		key         string
+		flags       []string
+		wantExit    bool
+		wantRequest int
+		wantLLM     bool
+	}{
+		{"config without llm with key", "version: 1\n", "test-key", nil, false, 1, true},
+		{"config without llm without key", "version: 1\n", "", nil, false, 0, false},
+		{"flag with fallback disabled", "version: 1\nllm:\n  fallback_to_rules: false\n", "", []string{"--llm", "claude"}, true, 0, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			requests = 0
+			workdir := t.TempDir()
+			if err := os.WriteFile(filepath.Join(workdir, ".terraspin.yml"), []byte(tc.config), 0644); err != nil {
+				t.Fatal(err)
+			}
+			args := append([]string{"diff", "--format", "json"}, tc.flags...)
+			args = append(args, planA, planB)
+			cmd := exec.Command(binary, args...)
+			cmd.Dir = workdir
+			cmd.Env = append(os.Environ(), "ANTHROPIC_API_KEY="+tc.key, "ANTHROPIC_BASE_URL="+server.URL)
+			output, err := cmd.CombinedOutput()
+			if tc.wantExit {
+				if err == nil || !strings.Contains(string(output), "ANTHROPIC_API_KEY") {
+					t.Fatalf("err=%v output=%s, want key error", err, output)
+				}
+			} else if err != nil {
+				t.Fatalf("err=%v output=%s", err, output)
+			}
+			if requests != tc.wantRequest {
+				t.Fatalf("requests=%d, want %d", requests, tc.wantRequest)
+			}
+			if got := strings.Contains(string(output), "LLM narrative"); got != tc.wantLLM {
+				t.Fatalf("LLM narrative=%t, want %t; output=%s", got, tc.wantLLM, output)
+			}
+		})
+	}
+}
+
+func TestCLIFlagLLMMissingKeyUsesFallbackDefaults(t *testing.T) {
+	var requests int
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		_, _ = w.Write([]byte(`{"content":[{"text":"{\"summary\":\"LLM narrative\"}"}]}`))
+	}))
+	defer server.Close()
+
+	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(t.TempDir(), "terraspin")
+	build := exec.Command("go", "build", "-o", binary, ".")
+	build.Dir = filepath.Join(repoRoot, "cmd", "terraspin")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build CLI: %v\n%s", err, output)
+	}
+
+	for _, tc := range []struct {
+		name     string
+		config   string
+		wantExit bool
+	}{
+		{"no config", "", false},
+		{"config without llm", "version: 1\n", false},
+		{"fallback disabled", "version: 1\nllm:\n  fallback_to_rules: false\n", true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			requests = 0
+			workdir := t.TempDir()
+			if tc.config != "" {
+				if err := os.WriteFile(filepath.Join(workdir, ".terraspin.yml"), []byte(tc.config), 0644); err != nil {
+					t.Fatal(err)
+				}
+			}
+			cmd := exec.Command(binary, "--llm", "claude", "--format", "json", filepath.Join(repoRoot, "testdata", "plan_empty.json"))
+			cmd.Dir = workdir
+			cmd.Env = append(os.Environ(), "ANTHROPIC_API_KEY=", "ANTHROPIC_BASE_URL="+server.URL)
+			output, err := cmd.CombinedOutput()
+			if tc.wantExit {
+				if err == nil || !strings.Contains(string(output), "ANTHROPIC_API_KEY") {
+					t.Fatalf("err=%v output=%s, want key error", err, output)
+				}
+			} else if err != nil || !strings.Contains(string(output), "rule-based") || !strings.Contains(string(output), "falling back to rule-based") {
+				t.Fatalf("err=%v output=%s, want warning and rule-based fallback", err, output)
+			}
+			if requests != 0 {
+				t.Fatalf("requests=%d, want no request without key", requests)
+			}
+		})
 	}
 }
 

@@ -90,7 +90,7 @@ func main() {
 	flag.Visit(func(f *flag.Flag) {
 		if f.Name == "llm" {
 			if cfg.LLM == nil {
-				cfg.LLM = &config.LLMConfig{}
+				cfg.LLM = config.DefaultConfig().LLM
 			}
 			cfg.LLM.Provider = llmProvider
 		}
