@@ -222,7 +222,7 @@ func (p *openAIProxy) serve() {
 }
 
 func (p *openAIProxy) handle(conn net.Conn) {
-	defer conn.Close()
+	defer func() { _ = conn.Close() }()
 	reader := bufio.NewReader(conn)
 	request, err := http.ReadRequest(reader)
 	if err != nil || request.Method != http.MethodConnect {
