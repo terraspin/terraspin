@@ -3,6 +3,7 @@ package ai
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"net/http"
 	"net/http/httptest"
 	"strings"
@@ -73,6 +74,104 @@ func TestExecuteHonorsRetryAfterAndAttemptLimit(t *testing.T) {
 	}
 }
 
+func TestExecuteRetryAfterValues(t *testing.T) {
+	cases := []struct {
+		name   string
+		header string
+		check  func(t *testing.T, delay time.Duration)
+	}{
+		{"seconds", "2", func(t *testing.T, delay time.Duration) {
+			if delay != 2*time.Second {
+				t.Errorf("delay=%v, want 2s", delay)
+			}
+		}},
+		{"negative", "-1", func(t *testing.T, delay time.Duration) {
+			if delay != 250*time.Millisecond {
+				t.Errorf("delay=%v, want fallback", delay)
+			}
+		}},
+		{"nonnumeric", "tomorrow", func(t *testing.T, delay time.Duration) {
+			if delay != 250*time.Millisecond {
+				t.Errorf("delay=%v, want fallback", delay)
+			}
+		}},
+		{"over cap", "30", func(t *testing.T, delay time.Duration) {
+			if delay != 10*time.Second {
+				t.Errorf("delay=%v, want 10s cap", delay)
+			}
+		}},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			var requests int
+			defer withTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+				requests++
+				if requests == 1 {
+					w.Header().Set("Retry-After", tc.header)
+					w.WriteHeader(http.StatusTooManyRequests)
+					return
+				}
+				claudeSuccess(w)
+			})()
+			var delays []time.Duration
+			withRetryHooks(t, func(_ context.Context, delay time.Duration) error { delays = append(delays, delay); return nil }, func(time.Duration) time.Duration { return 0 })
+
+			if _, _, err := Execute(context.Background(), LLMOptions{Provider: "claude", APIKey: "key", Timeout: time.Second, MaxRetries: 1}, "prompt"); err != nil {
+				t.Fatal(err)
+			}
+			if requests != 2 || len(delays) != 1 {
+				t.Fatalf("requests=%d delays=%v, want one retry", requests, delays)
+			}
+			tc.check(t, delays[0])
+		})
+	}
+}
+
+func TestExecuteHonorsRetryAfterHTTPDate(t *testing.T) {
+	var requests int
+	defer withTestServer(t, func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		if requests == 1 {
+			w.Header().Set("Retry-After", time.Now().Add(3*time.Second).UTC().Format(http.TimeFormat))
+			w.WriteHeader(http.StatusTooManyRequests)
+			return
+		}
+		claudeSuccess(w)
+	})()
+	var delays []time.Duration
+	withRetryHooks(t, func(_ context.Context, delay time.Duration) error { delays = append(delays, delay); return nil }, func(time.Duration) time.Duration { return 0 })
+
+	if _, _, err := Execute(context.Background(), LLMOptions{Provider: "claude", APIKey: "key", Timeout: time.Second, MaxRetries: 1}, "prompt"); err != nil {
+		t.Fatal(err)
+	}
+	if len(delays) != 1 || delays[0] <= time.Second || delays[0] > 3*time.Second {
+		t.Fatalf("delays=%v, want parsed HTTP date between 1s and 3s", delays)
+	}
+}
+
+func TestExecuteStopsWhenCancelledDuringBackoff(t *testing.T) {
+	defer withTestServer(t, func(w http.ResponseWriter, r *http.Request) { w.WriteHeader(http.StatusInternalServerError) })()
+	started := make(chan struct{})
+	stopped := errors.New("backoff stopped by cancelled context")
+	withRetryHooks(t, func(ctx context.Context, _ time.Duration) error {
+		close(started)
+		<-ctx.Done()
+		return stopped
+	}, func(time.Duration) time.Duration { return 0 })
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	result := make(chan error, 1)
+	go func() {
+		_, _, err := Execute(ctx, LLMOptions{Provider: "claude", APIKey: "key", Timeout: time.Second, MaxRetries: 1}, "prompt")
+		result <- err
+	}()
+	<-started
+	cancel()
+	if err := <-result; !errors.Is(err, stopped) {
+		t.Fatalf("err=%v, want cancellation to stop the backoff", err)
+	}
+}
+
 func TestExecuteAppliesAttemptTimeout(t *testing.T) {
 	var requests atomic.Int32
 	defer withTestServer(t, func(w http.ResponseWriter, r *http.Request) {
@@ -93,6 +192,31 @@ func TestExecuteRejectsMissingKeyWithoutRequest(t *testing.T) {
 	_, _, err := Execute(context.Background(), LLMOptions{Provider: "claude", Timeout: time.Second}, "prompt")
 	if err == nil || !strings.Contains(err.Error(), "ANTHROPIC_API_KEY") || requests != 0 {
 		t.Fatalf("err=%v requests=%d, want fail-fast without request", err, requests)
+	}
+}
+
+func TestExecuteGatewayStillRequiresClaudeKey(t *testing.T) {
+	requests := 0
+	srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		requests++
+		if got := r.Header.Get("x-api-key"); got != "gateway-placeholder" {
+			t.Errorf("x-api-key=%q, want placeholder", got)
+		}
+		claudeSuccess(w)
+	}))
+	defer srv.Close()
+	t.Setenv("ANTHROPIC_BASE_URL", srv.URL)
+
+	_, _, err := Execute(context.Background(), LLMOptions{Provider: "claude", Timeout: time.Second}, "prompt")
+	if err == nil || !strings.Contains(err.Error(), "ANTHROPIC_API_KEY") || !strings.Contains(err.Error(), "gateway/proxy without authentication can use a placeholder value") || requests != 0 {
+		t.Fatalf("err=%v requests=%d, want gateway key failure without request", err, requests)
+	}
+
+	if _, _, err := Execute(context.Background(), LLMOptions{Provider: "claude", APIKey: "gateway-placeholder", Timeout: time.Second}, "prompt"); err != nil {
+		t.Fatal(err)
+	}
+	if requests != 1 {
+		t.Fatalf("requests=%d, want one placeholder-key request", requests)
 	}
 }
 

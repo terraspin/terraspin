@@ -33,7 +33,7 @@ The command prints the version and, for release builds, commit/build metadata. A
 | Variable | Purpose |
 | --- | --- |
 | `ANTHROPIC_API_KEY` | API key for Claude when Claude is enabled |
-| `ANTHROPIC_BASE_URL` | Optional Anthropic-compatible endpoint URL |
+| `ANTHROPIC_BASE_URL` | Optional Anthropic-compatible endpoint URL; `ANTHROPIC_API_KEY` must still be non-empty (use a non-secret placeholder for an unauthenticated gateway/proxy) |
 | `CLAUDE_MODEL` | Claude model when `--model` is not set |
 | `OPENAI_API_KEY` | API key for OpenAI when OpenAI is selected |
 | `GITHUB_TOKEN` | GitHub PR comment integration token |

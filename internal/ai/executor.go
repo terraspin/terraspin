@@ -61,7 +61,7 @@ func Execute(ctx context.Context, options LLMOptions, prompt string) (string, in
 	}
 	if options.Provider == "claude" || options.Provider == "openai" {
 		if options.APIKey == "" {
-			return "", 0, fmt.Errorf("%s: missing required %s", options.Provider, apiKeyEnv(options.Provider))
+			return "", 0, fmt.Errorf("%s: missing required %s; a gateway/proxy without authentication can use a placeholder value", options.Provider, apiKeyEnv(options.Provider))
 		}
 	}
 
