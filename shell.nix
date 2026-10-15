@@ -4,7 +4,7 @@ pkgs.mkShell {
   name = "terraspin-dev";
 
   buildInputs = with pkgs; [
-    go_1_24
+    go
     gnumake
     goreleaser
     golangci-lint
