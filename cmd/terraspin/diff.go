@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/terraspin/terraspin/internal/ai"
+	"github.com/terraspin/terraspin/internal/config"
 	"github.com/terraspin/terraspin/internal/diff"
 )
 
@@ -66,6 +67,25 @@ Flags:
 		os.Exit(2)
 	}
 
+	cfg, cfgErr := config.Load(".terraspin.yml")
+	if cfgErr != nil {
+		fmt.Fprintf(os.Stderr, "config error: %v\n", cfgErr)
+		os.Exit(2)
+	}
+	llmCfg := config.DefaultConfig().LLM
+	if cfg.LLM != nil {
+		llmCfg = cfg.LLM
+	}
+	providerSet := false
+	fs.Visit(func(f *flag.Flag) {
+		if f.Name == "llm" {
+			providerSet = true
+		}
+	})
+	if !providerSet {
+		*llmProvider = llmCfg.Provider
+	}
+
 	if len(posArgs) != 2 {
 		fs.Usage()
 		os.Exit(2)
@@ -91,7 +111,16 @@ Flags:
 	// Generate AI analysis unless --no-ai
 	var narr *ai.Narrative
 	if !*noAI {
-		narr = diffAI(result, *llmProvider, *llmModel, *ollamaHost)
+		var llmErr error
+		narr, llmErr = diffAI(result, llmCfg, *llmProvider, *llmModel, *ollamaHost)
+		if llmErr != nil {
+			if llmCfg.FallbackToRules {
+				fmt.Fprintf(os.Stderr, "warning: LLM error (%v), skipping AI analysis\n", llmErr)
+			} else {
+				fmt.Fprintf(os.Stderr, "LLM error: %v\n", llmErr)
+				os.Exit(2)
+			}
+		}
 	}
 
 	// Format and print output
@@ -106,28 +135,24 @@ Flags:
 }
 
 // diffAI sends the diff to the LLM for analysis.
-func diffAI(result *diff.DiffResult, provider, model, ollamaHost string) *ai.Narrative {
+func diffAI(result *diff.DiffResult, cfg *config.LLMConfig, provider, flagModel, ollamaHost string) (*ai.Narrative, error) {
 	apiKey := os.Getenv("ANTHROPIC_API_KEY")
 	if provider == "openai" {
 		apiKey = os.Getenv("OPENAI_API_KEY")
 	}
-	if apiKey == "" {
-		fmt.Fprintf(os.Stderr, "warning: no API key set for %s, skipping AI analysis\n", provider)
-		return nil
+	model := flagModel
+	if model == "" {
+		model = cfg.ExplicitModel()
 	}
-
-	prompt := diff.BuildDiffPrompt(result)
-
-	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
-	defer cancel()
-
-	text, _, err := ai.QueryLLM(ctx, provider, apiKey, model, ollamaHost, prompt)
+	timeout, _ := time.ParseDuration(cfg.Timeout)
+	text, _, err := ai.Execute(context.Background(), ai.LLMOptions{
+		Provider: provider, APIKey: apiKey, Model: model, OllamaHost: ollamaHost,
+		Timeout: timeout, MaxRetries: cfg.MaxRetries,
+	}, diff.BuildDiffPrompt(result))
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "warning: LLM error (%v), skipping AI analysis\n", err)
-		return nil
+		return nil, err
 	}
-
-	return ai.ParseNarrativeFromLLM(text)
+	return ai.ParseNarrativeFromLLM(text), nil
 }
 
 func printDiffJSON(result *diff.DiffResult, narr *ai.Narrative) {

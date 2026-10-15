@@ -190,6 +190,18 @@ func TestCompareASTs_detectsActionChange(t *testing.T) {
 	}
 }
 
+func TestBuildDiffPromptDoesNotContainAttributeValues(t *testing.T) {
+	result := &DiffResult{
+		LabelA: "a", LabelB: "b", VersionA: "1.2", VersionB: "1.2",
+		Summary: DriftSummary{Modified: 1, Total: 1},
+		Diffs:   []ResourceDiff{{Address: "example.internal", Type: "example", Status: StatusModified, Changes: []AttributeDiff{{Path: "token", OldValue: "SYNTHETIC_SENSITIVE", NewValue: "SYNTHETIC_UNMARKED"}}}},
+	}
+	prompt := BuildDiffPrompt(result)
+	if strings.Contains(prompt, "SYNTHETIC_") || !strings.Contains(prompt, "example.internal") {
+		t.Fatal("diff prompt has wrong payload")
+	}
+}
+
 func TestDiffSummaryText(t *testing.T) {
 	r := &DiffResult{
 		Summary: DriftSummary{Added: 2, Removed: 1, Modified: 3, Unchanged: 5, Total: 11},

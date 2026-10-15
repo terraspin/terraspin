@@ -33,7 +33,7 @@ The command prints the version and, for release builds, commit/build metadata. A
 | Variable | Purpose |
 | --- | --- |
 | `ANTHROPIC_API_KEY` | API key for Claude when Claude is enabled |
-| `ANTHROPIC_BASE_URL` | Optional Anthropic-compatible endpoint URL |
+| `ANTHROPIC_BASE_URL` | Optional Anthropic-compatible endpoint URL; `ANTHROPIC_API_KEY` must still be non-empty (use a non-secret placeholder for an unauthenticated gateway/proxy) |
 | `CLAUDE_MODEL` | Claude model when `--model` is not set |
 | `OPENAI_API_KEY` | API key for OpenAI when OpenAI is selected |
 | `GITHUB_TOKEN` | GitHub PR comment integration token |
@@ -45,7 +45,7 @@ The command prints the version and, for release builds, commit/build metadata. A
 | `CI_MERGE_REQUEST_IID` | GitLab merge-request IID for notes |
 | `SLACK_WEBHOOK_URL` | Slack notification webhook |
 
-Only the variables above are read directly by the executable. `.env.example` is a convenience template; `LLM_PROVIDER`, `OPENAI_MODEL`, `OLLAMA_HOST`, and `OLLAMA_MODEL` in that file are not read at runtime. Use `--llm`, `--model`, and `--ollama-host` instead. If you use `direnv`, `.envrc` can source a local `.env` after `direnv allow`.
+Only the variables above are read directly by the executable. `.env.example` contains only these runtime variables; use `--llm`, `--model`, and `--ollama-host` to select providers and models. If you use `direnv`, `.envrc` can source a local `.env` after `direnv allow`.
 
 ## Development shell
 

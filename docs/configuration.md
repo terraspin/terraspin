@@ -9,10 +9,10 @@ version: 1
 
 llm:
   provider: claude          # claude | openai | ollama
-  model: claude-sonnet-4-6  # accepted, but not currently applied at runtime
-  timeout: 30s              # accepted, but not currently applied at runtime
-  max_retries: 2            # accepted, but not currently applied at runtime
-  fallback_to_rules: true   # accepted, but not currently applied at runtime
+  model: claude-sonnet-4-6  # provider model (unless --model is set)
+  timeout: 30s              # timeout per provider attempt
+  max_retries: 2            # additional retry attempts
+  fallback_to_rules: true   # use rules after an LLM error
 
 risk:
   fail_on: high             # exit code 1 if risk >= critical|high|medium|low
@@ -47,27 +47,27 @@ slack:
 | Config file with `llm` | Yes | Uses its `provider` value |
 | `--llm` flag | Yes | Enables and selects the flag's provider, even without a config file |
 | API key without config file or `--llm` | No | Rule-based narrative |
-| `--llm` without an API key | Attempts the provider request with an empty key | Provider error falls back to rule-based analysis; a fail-fast no-request check is not implemented yet. |
+| `--llm` without an API key | No | Fails fast; fallback follows `fallback_to_rules`. |
 
-The default config-file provider is `claude`. The `--model` flag is applied to the provider request; the `llm.model` config field is not yet applied.
+The default config-file provider is `claude`. The `--model` flag is applied to the provider request; `llm.model` is used only when explicitly written in the config file. Claude and OpenAI require a non-empty API-key environment variable even when a gateway/proxy endpoint is configured. For an unauthenticated gateway/proxy, set the required variable to a non-secret placeholder value.
 
 ### LLM config fields
 
 | Field | Config default | Runtime status |
 | --- | --- | --- |
 | `provider` | `claude` | Applied when an `llm` block exists. |
-| `model` | `claude-sonnet-4-6` | Not yet applied from config; use `--model` (or `CLAUDE_MODEL` for Claude). |
-| `timeout` | `30s` | Not yet applied from config; callers use a fixed 30-second timeout. |
-| `max_retries` | `2` | Not yet applied; requests are not retried. |
-| `fallback_to_rules` | `true` | Not yet applied; analyze falls back to rules after an LLM error. |
+| `model` | `claude-sonnet-4-6` | Applied only when explicitly written; `--model` takes precedence. Provider defaults apply otherwise. |
+| `timeout` | `30s` | Applied per attempt; invalid Go durations fail config loading. |
+| `max_retries` | `2` | Applied as additional attempts for network, timeout, HTTP 429, and 5xx errors. |
+| `fallback_to_rules` | `true` | Applied: true falls back after warning; false exits with code 2. |
 
-These unused config fields are retained for compatibility and should be treated as **not yet effective**.
+Retries use capped exponential backoff with jitter and honor `Retry-After` up to 10 seconds. The conservative maximum request time is `(max_retries + 1) × timeout + total retry waits`; using the 10-second wait cap per retry, the defaults are `(2 + 1) × 30s + 2 × 10s = 110s`. A request that succeeds earlier stops retrying sooner.
 
-`terraspin diff` does not load `.terraspin.yml`; it uses its own LLM flags and only requests its provider when the matching API key is present.
+`terraspin diff` loads `.terraspin.yml` and uses its `llm` settings; `--llm` and `--model` override the configured provider and model. It only requests Claude or OpenAI when the matching API key is non-empty.
 
 ## Data sent to LLM providers
 
-For v0.1.x, the current prompt builders send a static system prompt plus the following plan-derived fields. They do not include raw `Before` or `After` attribute values today. This is observed behavior, not a payload-contract guarantee: it needs a regression test before future prompt refactors.
+For v0.1.x, Claude and OpenAI requests include a static system prompt plus the following plan-derived fields in their user prompt. Ollama sends only the user prompt (no system field). They do not include raw `Before` or `After` attribute values today. This is observed behavior, not a long-term payload contract.
 
 | Command | Plan-derived fields in the user prompt |
 | --- | --- |
@@ -121,9 +121,9 @@ Notifications fire when `SLACK_WEBHOOK_URL` (or the custom environment variable)
 ## Limitations
 
 - Redaction covers only Terraform-marked sensitive values. Unmarked `user_data`, tags, ARNs, and account IDs remain visible in `diff`; a list containing a sensitive element is redacted as one attribute.
-- Analyze and diff use fixed 30-second LLM timeouts. They do not retry or rate-limit requests.
+- LLM retries cover network, timeout, HTTP 429, and 5xx errors only; there is no rate-limit scheduler beyond retry backoff.
 - Resource addresses are included in LLM prompts and may reveal internal names. Address-based prompt injection is not mitigated.
-- Prompt payload contents are not protected by an automated contract test yet; treat the documented v0.1.x field list as version-specific.
-- When LLM is enabled without an API key, analyze attempts a request with an empty key before falling back; a fail-fast check is not implemented.
+- Automated tests lock Claude CLI `analyze` and `diff` payloads against synthetic attribute values, including the system field; treat the documented v0.1.x field list as version-specific.
+- Claude and OpenAI fail before sending a request when their required API key is absent. Ollama does not require a key.
 - The rule engine does not support list indexes, wildcards, or regex matching.
 - The built-in AWS behavior is limited to risk-score multipliers; no AWS rule pack is included.

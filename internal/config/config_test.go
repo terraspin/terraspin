@@ -3,6 +3,7 @@ package config
 import (
 	"os"
 	"path/filepath"
+	"strings"
 	"testing"
 )
 
@@ -41,6 +42,41 @@ func TestLoad_ConfigWithoutLLMUsesDefaults(t *testing.T) {
 				t.Errorf("llm = %#v, want defaults %#v", cfg.LLM, DefaultConfig().LLM)
 			}
 		})
+	}
+}
+
+func TestLoad_ValidatesLLMTimeoutAndTracksExplicitModel(t *testing.T) {
+	dir := t.TempDir()
+	invalid := filepath.Join(dir, "invalid.yml")
+	if err := os.WriteFile(invalid, []byte("version: 1\nllm:\n  timeout: nope\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := Load(invalid); err == nil || !strings.Contains(err.Error(), "llm.timeout") {
+		t.Fatalf("err=%v, want llm.timeout validation error", err)
+	}
+
+	explicit := filepath.Join(dir, "explicit.yml")
+	if err := os.WriteFile(explicit, []byte("version: 1\nllm:\n  provider: openai\n  model: custom-model\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err := Load(explicit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.LLM.ExplicitModel() != "custom-model" {
+		t.Errorf("explicit model = %q", cfg.LLM.ExplicitModel())
+	}
+
+	implicit := filepath.Join(dir, "implicit.yml")
+	if err := os.WriteFile(implicit, []byte("version: 1\nllm:\n  provider: openai\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	cfg, err = Load(implicit)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if cfg.LLM.ExplicitModel() != "" {
+		t.Errorf("implicit model = %q, want empty", cfg.LLM.ExplicitModel())
 	}
 }
 
