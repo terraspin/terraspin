@@ -2,12 +2,14 @@
 
 ## Supported Versions
 
-Only the latest v0.x release receives security fixes.
+Only the latest release receives security fixes.
 
 | Version | Supported |
 | --- | --- |
-| v0.1.0 (latest v0.x release) | Yes |
+| The latest release | Yes |
 | Earlier releases | No |
+
+v0.1.0 has a sensitive-value handling issue that is corrected in the next release.
 
 ## Reporting a Vulnerability
 
@@ -19,6 +21,4 @@ The maintainer will acknowledge reports and share status updates on a best-effor
 
 This policy covers Terraspin source code and official release artifacts from this repository. It does not cover Terraform providers, Terraform/OpenTofu, third-party LLM providers, or infrastructure described by a plan.
 
-## Enabling Private Reporting
-
-A repository owner can enable this GitHub feature in **Settings → Code security** by enabling private vulnerability reporting.
+Official release artifacts are not currently signed. Each release includes checksums; verify them before use.

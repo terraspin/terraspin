@@ -12,7 +12,7 @@ This is a code-derived model of Terraspin v0.1.x, not a guarantee. **[VERIFIED]*
 
 - **[VERIFIED]** Analyze sends only risk tier/score, tier counts, resource address, action, tier, and optional affected-resource count to its prompt (`cmd/terraspin/main.go:349-383`; `internal/ai/providers.go:201-232`). Diff sends labels, Terraform versions, resource address/type/status, and changed-attribute counts—not attribute values (`internal/diff/diff.go:305-334`). Payload tests assert that synthetic sensitive and unmarked attribute values are absent for analyze and diff (`cmd/terraspin/main_test.go:252-313`; `cmd/terraspin/payload_providers_test.go:100-129`).
 - **[VERIFIED]** Claude sends `SystemPrompt` in Anthropic's `system` field and an API key in `x-api-key` (`internal/ai/claude.go:41-51`, `78-96`). OpenAI sends the same system prompt as a system message and uses `Authorization: Bearer` (`internal/ai/providers.go:34-62`). Ollama sends only its user prompt—no system field and no API-key header (`internal/ai/providers.go:93-133`); provider tests assert this difference (`cmd/terraspin/payload_providers_test.go:112-124`).
-- **[NOT VERIFIED]** Resource addresses are interpolated into prompts, and no address-validation or prompt-injection mitigation test was found (`cmd/terraspin/main.go:350-360`; `internal/diff/diff.go:314-322`). Treat plan JSON as hostile and do not rely on an LLM to follow instructions embedded in addresses.
+- **[VERIFIED]** Resource addresses are interpolated into analyze and diff prompts (`cmd/terraspin/main.go:350-360`; `internal/diff/diff.go:314-322`). **[NOT VERIFIED]** No address-validation or prompt-injection mitigation test was found. Treat plan JSON as hostile and do not rely on an LLM to follow instructions embedded in addresses.
 
 ## Local and CI Outputs
 
@@ -25,6 +25,12 @@ This is a code-derived model of Terraspin v0.1.x, not a guarantee. **[VERIFIED]*
 - **[VERIFIED]** Claude and OpenAI fail before any request when their key is empty; a gateway without authentication still needs a non-secret placeholder (`internal/ai/executor.go:54-66`; `internal/ai/executor_test.go:153-184`). Ollama does not require a key (`internal/ai/executor_test.go:186-197`). Keys are read from environment variables and placed in request headers; this code does not write them to output (`cmd/terraspin/main.go:363-383`; `internal/ai/claude.go:90-96`).
 - **[VERIFIED]** Each LLM attempt has its own timeout; retryable failures are network errors, timeouts, HTTP 429, and 5xx. Backoff and `Retry-After` are capped at 10 seconds (`internal/ai/executor.go:54-86`, `108-132`).
 - **[NOT VERIFIED]** Analyze and diff start retries with `context.Background()`, so they do not impose a separate total deadline across attempts and waits (`cmd/terraspin/main.go:378-383`; `cmd/terraspin/diff.go:147-151`).
+
+## Limitations
+
+- **[VERIFIED]** Values that Terraform does not mark sensitive remain visible in local diff output (`internal/ai/preprocess.go:25-52`; `cmd/terraspin/diff.go:194-226`).
+- **[VERIFIED]** Resource addresses enter analyze and diff prompts (`cmd/terraspin/main.go:350-360`; `internal/diff/diff.go:314-322`).
+- **[VERIFIED]** Release artifacts are currently unsigned: the configured checksum remains active while the only `signs` block is commented out (`.goreleaser.yml:33-36`, `.goreleaser.yml:71-81`).
 
 ## Blast-Radius Limits
 
