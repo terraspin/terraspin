@@ -1,37 +1,37 @@
 # Security Model
 
-This is a code-derived model of Terraspin v0.1.x, not a guarantee. **[VERIFIED]** statements cite the implementation or tests; **[NOT VERIFIED]** statements identify limits not covered by a dedicated security test.
+This is a code-derived model of Terraspin v0.1.x, not a guarantee. **[VERIFIED]** statements cite the implementation or tests; **[NOT VERIFIED]** statements identify limits not covered by a dedicated security test. Code references use stable file and symbol names rather than line numbers.
 
 ## Trust Boundaries
 
-- **[VERIFIED]** `terraform show -json` output is untrusted input. The parser checks JSON syntax and `format_version`, then preserves managed-resource addresses, metadata, and before/after maps (`internal/parser/parse.go:45-106`).
-- **[VERIFIED]** Analyze redacts Terraform-marked sensitive resource values before scoring, formatting, or an LLM call (`cmd/terraspin/main.go:121-169`; `internal/ai/preprocess.go:13-23`). `diff` redacts the source ASTs and sensitive changed attributes (`internal/diff/diff.go:15-43`). CLI tests cover marked scalar, collection, nested, added, and removed values in text, JSON, and Markdown output (`cmd/terraspin/main_test.go:90-180`).
-- **[VERIFIED]** Redaction follows Terraform's `before_sensitive` and `after_sensitive` markers; it is not attribute-name-based (`internal/ai/preprocess.go:25-52`). Unmarked values can therefore remain in local `diff` output, which formats old/new attribute values (`cmd/terraspin/diff.go:194-226`, `239-293`). Plan variables and output changes are retained by the parser, but this redactor only traverses resource changes (`internal/parser/parse.go:56-68`; `internal/ai/preprocess.go:15-21`).
+- **[VERIFIED]** `terraform show -json` output is untrusted input. `internal/parser.ParsePlan` checks JSON syntax and `format_version`, then preserves managed-resource addresses, metadata, and before/after maps.
+- **[VERIFIED]** Analyze calls `internal/ai.RedactSensitive` before scoring, formatting, or an LLM call; `internal/diff.Compare` redacts source ASTs and sensitive changed attributes. `cmd/terraspin.TestCLISensitiveValuesNeverReachOutput` covers marked scalar, collection, nested, added, and removed values in text, JSON, and Markdown output.
+- **[VERIFIED]** `internal/ai.RedactSensitive` follows Terraform's `before_sensitive` and `after_sensitive` markers; it is not attribute-name-based. Unmarked values can therefore remain in local diff output, which `cmd/terraspin.formatDiffText` and `formatDiffMD` render. `internal/parser.ParsePlan` retains plan variables and output changes, but the redactor traverses only resource changes.
 
 ## Optional LLM Requests
 
-- **[VERIFIED]** Analyze sends only risk tier/score, tier counts, resource address, action, tier, and optional affected-resource count to its prompt (`cmd/terraspin/main.go:349-383`; `internal/ai/providers.go:201-232`). Diff sends labels, Terraform versions, resource address/type/status, and changed-attribute counts—not attribute values (`internal/diff/diff.go:305-334`). Payload tests assert that synthetic sensitive and unmarked attribute values are absent for analyze and diff (`cmd/terraspin/main_test.go:252-313`; `cmd/terraspin/payload_providers_test.go:100-129`).
-- **[VERIFIED]** Claude sends `SystemPrompt` in Anthropic's `system` field and an API key in `x-api-key` (`internal/ai/claude.go:41-51`, `78-96`). OpenAI sends the same system prompt as a system message and uses `Authorization: Bearer` (`internal/ai/providers.go:34-62`). Ollama sends only its user prompt—no system field and no API-key header (`internal/ai/providers.go:93-133`); provider tests assert this difference (`cmd/terraspin/payload_providers_test.go:112-124`).
-- **[VERIFIED]** Resource addresses are interpolated into analyze and diff prompts (`cmd/terraspin/main.go:350-360`; `internal/diff/diff.go:314-322`). **[NOT VERIFIED]** No address-validation or prompt-injection mitigation test was found. Treat plan JSON as hostile and do not rely on an LLM to follow instructions embedded in addresses.
+- **[VERIFIED]** `cmd/terraspin.buildLLMNarrative` and `internal/ai.BuildAnalysisPrompt` send analyze risk data, resource addresses, actions, tiers, and affected-resource counts—not attribute maps. `internal/diff.BuildDiffPrompt` sends labels, Terraform versions, resource address/type/status, and changed-attribute counts—not attribute values. `cmd/terraspin.TestCLIPayloadsExcludeAttributeValuesIncludingSystem` and `TestCLIOpenAIAndOllamaPayloadsExcludeAttributeValues` cover these payloads.
+- **[VERIFIED]** `internal/ai.QueryClaude` sends `SystemPrompt` in Anthropic's `system` field and an API key in `x-api-key`. `internal/ai.QueryOpenAI` sends the same system prompt as a system message and uses `Authorization: Bearer`. `internal/ai.QueryOllama` sends only its user prompt—no system field and no API-key header; `cmd/terraspin.assertProviderPayloads` tests this difference.
+- **[VERIFIED]** `cmd/terraspin.buildLLMNarrative` and `internal/diff.BuildDiffPrompt` interpolate resource addresses into prompts. **[NOT VERIFIED]** No address-validation or prompt-injection mitigation test was found. Treat plan JSON as hostile and do not rely on an LLM to follow instructions embedded in addresses.
 
 ## Local and CI Outputs
 
-- **[VERIFIED]** `--post-comment` embeds the complete analyze output in a GitHub PR comment or GitLab MR note (`cmd/terraspin/main.go:407-438`). These outputs contain resource addresses, risk data, blast-radius information, and any narrative. GitHub uses `GITHUB_TOKEN`; GitLab uses `GITLAB_TOKEN` or `CI_JOB_TOKEN` (`internal/integrations/github.go:21-29`, `82-98`; `internal/integrations/gitlab.go:18-49`).
-- **[VERIFIED]** Slack receives the risk tier, score, action counts, and narrative summary when configured (`cmd/terraspin/main.go:441-479`; `internal/integrations/slack.go:40-60`).
+- **[VERIFIED]** `cmd/terraspin.postToCI` embeds complete analyze output in a GitHub PR comment or GitLab MR note. These outputs contain resource addresses, risk data, blast-radius information, and any narrative. `internal/integrations.NewGitHubClientFromEnv` uses `GITHUB_TOKEN`; `NewGitLabClientFromEnv` uses `GITLAB_TOKEN` or `CI_JOB_TOKEN`.
+- **[VERIFIED]** `cmd/terraspin.notifySlack` and `internal/integrations.SlackWebhook.SendRiskNotification` send the risk tier, score, action counts, and narrative summary when configured.
 - **[NOT VERIFIED]** LLM output is not independently sanitized before being printed or included in comments/Slack. Use a trusted provider and review automated comments.
 
 ## Keys, Retries, and Limits
 
-- **[VERIFIED]** Claude and OpenAI fail before any request when their key is empty; a gateway without authentication still needs a non-secret placeholder (`internal/ai/executor.go:54-66`; `internal/ai/executor_test.go:153-184`). Ollama does not require a key (`internal/ai/executor_test.go:186-197`). Keys are read from environment variables and placed in request headers; this code does not write them to output (`cmd/terraspin/main.go:363-383`; `internal/ai/claude.go:90-96`).
-- **[VERIFIED]** Each LLM attempt has its own timeout; retryable failures are network errors, timeouts, HTTP 429, and 5xx. Backoff and `Retry-After` are capped at 10 seconds (`internal/ai/executor.go:54-86`, `108-132`).
-- **[NOT VERIFIED]** Analyze and diff start retries with `context.Background()`, so they do not impose a separate total deadline across attempts and waits (`cmd/terraspin/main.go:378-383`; `cmd/terraspin/diff.go:147-151`).
+- **[VERIFIED]** `internal/ai.Execute` rejects empty Claude and OpenAI keys before a request; a gateway without authentication still needs a non-secret placeholder. `TestExecuteGatewayStillRequiresClaudeKey` covers that path. `TestExecuteAllowsOllamaWithoutKey` covers Ollama without a key. Keys are read from environment variables and passed in provider headers; the reviewed code does not write them to output.
+- **[VERIFIED]** `internal/ai.Execute`, `isRetryable`, and `retryDelay` apply a timeout per attempt; retryable failures are network errors, timeouts, HTTP 429, and 5xx. Backoff and `Retry-After` are capped at 10 seconds.
+- **[NOT VERIFIED]** Analyze and diff call `internal/ai.Execute` with `context.Background()`, so they do not impose a separate total deadline across attempts and waits.
 
 ## Limitations
 
-- **[VERIFIED]** Values that Terraform does not mark sensitive remain visible in local diff output (`internal/ai/preprocess.go:25-52`; `cmd/terraspin/diff.go:194-226`).
-- **[VERIFIED]** Resource addresses enter analyze and diff prompts (`cmd/terraspin/main.go:350-360`; `internal/diff/diff.go:314-322`).
-- **[VERIFIED]** Release artifacts are currently unsigned: the configured checksum remains active while the only `signs` block is commented out (`.goreleaser.yml:40-41`, `.goreleaser.yml:71-81`).
+- **[VERIFIED]** Values that Terraform does not mark sensitive remain visible in local diff output through `internal/ai.RedactSensitive` and `cmd/terraspin.formatDiffText` / `formatDiffMD`.
+- **[VERIFIED]** Resource addresses enter analyze and diff prompts through `cmd/terraspin.buildLLMNarrative` and `internal/diff.BuildDiffPrompt`.
+- **[VERIFIED]** Release artifacts are currently unsigned: the `checksum` section remains active while the `signs` section in `.goreleaser.yml` is commented out.
 
 ## Blast-Radius Limits
 
-- **[VERIFIED]** Blast radius reads root-module expression references and deliberately excludes `module.*`, data-source, and `depends_on` relationships (`internal/analyzer/blast.go:82-139`; `internal/analyzer/blast_test.go:65-111`). It is an aid to review, not a complete dependency graph.
+- **[VERIFIED]** `internal/analyzer.ParseDependencyRefs` reads root-module expression references and excludes `module.*`, data-source, and `depends_on` relationships. `TestParseDependencyRefs_filtersVariablesAndDataRefs` covers the filtering. Blast radius is an aid to review, not a complete dependency graph.

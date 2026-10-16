@@ -21,4 +21,4 @@ The maintainer will acknowledge reports and share status updates on a best-effor
 
 This policy covers Terraspin source code and official release artifacts from this repository. It does not cover Terraform providers, Terraform/OpenTofu, third-party LLM providers, or infrastructure described by a plan.
 
-Official release artifacts are not currently signed. Each release includes checksums; verify them before use.
+Official release artifacts are not currently signed. Each release includes checksums. Checksums detect corruption but, because they are not signed, do not protect against a compromised release.
