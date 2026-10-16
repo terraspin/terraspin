@@ -80,6 +80,7 @@ ANTHROPIC_API_KEY="..." terraspin --llm claude plan.json
 | [Architecture](docs/architecture.md)           | Pipeline, risk scoring, AI narrative, blast radius |
 | [Project Structure](docs/project-structure.md) | Directory layout, package responsibilities         |
 | [Development](docs/development.md)             | Build, test, lint, conventions                     |
+| [Security](SECURITY.md) and [Security Model](docs/security.md) | Reporting policy and current security boundaries |
 | [Contributing](docs/contributing.md)           | Setup, PR process, design principles               |
 
 ## How it works
