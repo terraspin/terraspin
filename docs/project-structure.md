@@ -64,7 +64,7 @@ testdata/          Terraform plan fixtures for testing
 
 | File            | Purpose                          |
 | --------------- | -------------------------------- |
-| `go.mod`        | Go module (1.24). Deps: mcp-go, yaml.v3 |
+| `go.mod`        | Go module (1.25.5+). Deps: mcp-go, yaml.v3 |
 | `shell.nix`     | Nix dev shell with full tooling  |
 | `.env.example`  | Environment variable template    |
 | `.gitignore`    | Go build artifacts, .env         |

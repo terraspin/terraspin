@@ -14,7 +14,7 @@ The public `terraspin/homebrew-tap` repository contains `terraspin.rb` for relea
 go install github.com/terraspin/terraspin/cmd/terraspin@latest
 ```
 
-Requires Go 1.24+.
+Requires Go 1.25.5+.
 
 ## Binary releases
 
