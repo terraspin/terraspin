@@ -1,0 +1,60 @@
+┌─ Terraspin Plan Analysis ──────────────────────────────────┐
+│  3 resources  ·  terraform 1.7.2
+└────────────────────────────────────────────────────────────┘
+
+  Overall Risk  CRITICAL (score: 100)
+
+  1 to create  ·  1 to update  ·  1 to delete  ·  0 to replace
+
+──── Critical & High Risk Changes ────────────────────────────
+
+  [CRITICAL 100.0]  aws_s3_bucket.data  →  DELETE
+
+  [HIGH  60.0]  aws_db_instance.replica  →  UPDATE
+
+──── Analysis ────────────────────────────────────────────────
+
+  Infrastructure summary
+  1 Database, 1 Storage, 1 IAM
+
+  Risk score: 100/100  ·  Risk level: CRITICAL
+
+  Resource change summary
+  1 create, 1 update, 1 delete
+
+  Blast radius summary
+  No cascading dependencies detected
+
+  Critical findings
+    ⚠  [CRITICAL] aws_s3_bucket.data → DELETE: No direct blast radius detected, but review dependent resources manually
+    ⚠  [HIGH] aws_db_instance.replica → UPDATE: No direct blast radius detected, but review dependent resources manually
+
+  Affected resources by severity
+    [CRITICAL] aws_s3_bucket.data
+    [HIGH] aws_db_instance.replica
+    [LOW] aws_iam_access_key.deployer
+
+  Summary
+  This plan affects 1 Database, 1 Storage, 1 IAM infrastructure with overall risk CRITICAL (100/100). 2 changes need immediate review.
+
+  Risk assessment
+  Plan scored critical (100/100) with 2 critical or high-risk changes. Changes to databases, networking, DNS, or IAM can cause cascading outages. Verify dependencies, ensure rollback plans are in place, and apply during a maintenance window if critical resources are affected.
+
+  Actionable recommendations
+    □  Review aws_s3_bucket.data before applying
+    □  Review aws_db_instance.replica before applying
+
+  Rollback strategy
+  1. terraform state pull > backup.tfstate (save current state)
+2. terraform destroy -target=<failed resource> (revert specific resource)
+3. terraform apply -var-file=previous.tfvars (re-apply last known good config)
+4. For stateful resources: restore from most recent backup/snapshot (RDS snapshot, EBS snapshot, S3 versioning)
+
+  Next steps
+    →  1. DO NOT apply this plan to production without explicit approval from your team lead
+    →  2. Review each CRITICAL finding above and ensure recovery plans are in place
+    →  3. Take a state backup: terraform state pull > backup-$(date +%Y%m%d-%H%M%S).tfstate
+    →  4. Apply in staging first if possible, then schedule production apply during a maintenance window
+
+
+──── 1 critical  ·  1 high  ·  0 medium  ·  1 low ──────────

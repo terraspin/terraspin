@@ -7,6 +7,23 @@ import (
 	"testing"
 )
 
+func FuzzParsePlan(f *testing.F) {
+	fixtures, err := filepath.Glob(filepath.Join("..", "..", "testdata", "*.json"))
+	if err != nil {
+		f.Fatal(err)
+	}
+	for _, fixture := range fixtures {
+		data, err := os.ReadFile(fixture)
+		if err != nil {
+			f.Fatal(err)
+		}
+		f.Add(data)
+	}
+	f.Fuzz(func(t *testing.T, data []byte) {
+		_, _ = ParsePlan(data)
+	})
+}
+
 func TestParsePlan(t *testing.T) {
 	data, err := os.ReadFile(filepath.Join("..", "..", "testdata", "plan.json"))
 	if err != nil {

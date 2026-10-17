@@ -1,0 +1,211 @@
+{
+  "diff": {
+    "label_a": "plan-a",
+    "label_b": "plan-b",
+    "terraform_version_a": "1.7.2",
+    "terraform_version_b": "1.7.2",
+    "summary": {
+      "added": 0,
+      "removed": 0,
+      "modified": 1,
+      "unchanged": 0,
+      "total": 1
+    },
+    "diffs": [
+      {
+        "address": "example_sensitive_resource.test",
+        "type": "example_sensitive_resource",
+        "status": "modified",
+        "old": {
+          "address": "example_sensitive_resource.test",
+          "module_path": "",
+          "type": "example_sensitive_resource",
+          "name": "test",
+          "provider_name": "example",
+          "action": "update",
+          "before": {
+            "api_token": "[SENSITIVE REDACTED]",
+            "connections": [
+              {
+                "auth": {
+                  "tokens": [
+                    "[SENSITIVE REDACTED]"
+                  ]
+                }
+              }
+            ],
+            "secret_tree": "[SENSITIVE REDACTED]",
+            "tokens": [
+              "[SENSITIVE REDACTED]",
+              "[SENSITIVE REDACTED]"
+            ],
+            "unchanged_token": "[SENSITIVE REDACTED]"
+          },
+          "after": {
+            "api_token": "[SENSITIVE REDACTED]",
+            "connections": [
+              {
+                "auth": {
+                  "tokens": [
+                    "[SENSITIVE REDACTED]"
+                  ]
+                }
+              }
+            ],
+            "secret_tree": "[SENSITIVE REDACTED]",
+            "tokens": [
+              "[SENSITIVE REDACTED]",
+              "[SENSITIVE REDACTED]"
+            ],
+            "unchanged_token": "[SENSITIVE REDACTED]"
+          },
+          "before_sensitive": {
+            "api_token": true,
+            "connections": [
+              {
+                "auth": {
+                  "tokens": [
+                    true
+                  ]
+                }
+              }
+            ],
+            "secret_tree": true,
+            "tokens": [
+              true,
+              true
+            ],
+            "unchanged_token": true
+          },
+          "after_sensitive": {
+            "api_token": true,
+            "connections": [
+              {
+                "auth": {
+                  "tokens": [
+                    true
+                  ]
+                }
+              }
+            ],
+            "secret_tree": true,
+            "tokens": [
+              true,
+              true
+            ],
+            "unchanged_token": true
+          },
+          "sensitive": true
+        },
+        "new": {
+          "address": "example_sensitive_resource.test",
+          "module_path": "",
+          "type": "example_sensitive_resource",
+          "name": "test",
+          "provider_name": "example",
+          "action": "update",
+          "before": {
+            "api_token": "[SENSITIVE REDACTED]",
+            "connections": [
+              {
+                "auth": {
+                  "tokens": [
+                    "[SENSITIVE REDACTED]"
+                  ]
+                }
+              }
+            ],
+            "secret_tree": "[SENSITIVE REDACTED]",
+            "tokens": [
+              "[SENSITIVE REDACTED]",
+              "[SENSITIVE REDACTED]"
+            ],
+            "unchanged_token": "[SENSITIVE REDACTED]"
+          },
+          "after": {
+            "api_token": "[SENSITIVE REDACTED]",
+            "connections": [
+              {
+                "auth": {
+                  "tokens": [
+                    "[SENSITIVE REDACTED]"
+                  ]
+                }
+              }
+            ],
+            "secret_tree": "[SENSITIVE REDACTED]",
+            "tokens": [
+              "[SENSITIVE REDACTED]",
+              "[SENSITIVE REDACTED]"
+            ],
+            "unchanged_token": "[SENSITIVE REDACTED]"
+          },
+          "before_sensitive": {
+            "api_token": true,
+            "connections": [
+              {
+                "auth": {
+                  "tokens": [
+                    true
+                  ]
+                }
+              }
+            ],
+            "secret_tree": true,
+            "tokens": [
+              true,
+              true
+            ],
+            "unchanged_token": true
+          },
+          "after_sensitive": {
+            "api_token": true,
+            "connections": [
+              {
+                "auth": {
+                  "tokens": [
+                    true
+                  ]
+                }
+              }
+            ],
+            "secret_tree": true,
+            "tokens": [
+              true,
+              true
+            ],
+            "unchanged_token": true
+          },
+          "sensitive": true
+        },
+        "changes": [
+          {
+            "path": "api_token",
+            "old_value": "[SENSITIVE REDACTED]",
+            "new_value": "[SENSITIVE REDACTED]"
+          },
+          {
+            "path": "connections",
+            "old_value": "[SENSITIVE REDACTED]",
+            "new_value": "[SENSITIVE REDACTED]"
+          },
+          {
+            "path": "secret_tree.children",
+            "old_value": "[SENSITIVE REDACTED]",
+            "new_value": "[SENSITIVE REDACTED]"
+          },
+          {
+            "path": "secret_tree.key",
+            "old_value": "[SENSITIVE REDACTED]",
+            "new_value": "[SENSITIVE REDACTED]"
+          },
+          {
+            "path": "tokens",
+            "old_value": "[SENSITIVE REDACTED]",
+            "new_value": "[SENSITIVE REDACTED]"
+          }
+        ]
+      }
+    ]
+  }
+}

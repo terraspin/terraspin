@@ -1,0 +1,69 @@
+┌─ Terraspin Plan Analysis ──────────────────────────────────┐
+│  7 resources  ·  terraform 1.7.2
+└────────────────────────────────────────────────────────────┘
+
+  Overall Risk  CRITICAL (score: 100)
+
+  1 to create  ·  2 to update  ·  2 to delete  ·  1 to replace
+
+──── Critical & High Risk Changes ────────────────────────────
+
+  [CRITICAL 100.0]  module.database.aws_db_instance.primary  →  REPLACE
+
+  [CRITICAL 100.0]  module.database.aws_security_group.db  →  DELETE
+
+  [CRITICAL 100.0]  module.network.aws_vpc.main  →  DELETE
+
+  [HIGH  60.0]  module.database.module.replica.aws_db_instance.replica1  →  UPDATE
+
+──── Analysis ────────────────────────────────────────────────
+
+  Infrastructure summary
+  2 Database, 2 Networking, 1 Security, 1 Compute
+
+  Risk score: 100/100  ·  Risk level: CRITICAL
+
+  Resource change summary
+  1 create, 2 update, 2 delete, 1 replace
+
+  Blast radius summary
+  No cascading dependencies detected
+
+  Critical findings
+    ⚠  [CRITICAL] module.database.aws_db_instance.primary → REPLACE: No direct blast radius detected, but review dependent resources manually
+    ⚠  [CRITICAL] module.database.aws_security_group.db → DELETE: No direct blast radius detected, but review dependent resources manually
+    ⚠  [CRITICAL] module.network.aws_vpc.main → DELETE: No direct blast radius detected, but review dependent resources manually
+    ⚠  [HIGH] module.database.module.replica.aws_db_instance.replica1 → UPDATE: No direct blast radius detected, but review dependent resources manually
+
+  Affected resources by severity
+    [CRITICAL] module.database.aws_db_instance.primary, module.database.aws_security_group.db, module.network.aws_vpc.main
+    [HIGH] module.database.module.replica.aws_db_instance.replica1
+    [MEDIUM] aws_instance.gateway
+    [LOW] module.network.aws_subnet.private
+
+  Summary
+  This plan affects 2 Database, 2 Networking, 1 Security, 1 Compute infrastructure with overall risk CRITICAL (100/100). 4 changes need immediate review.
+
+  Risk assessment
+  Plan scored critical (100/100) with 4 critical or high-risk changes. Changes to databases, networking, DNS, or IAM can cause cascading outages. Verify dependencies, ensure rollback plans are in place, and apply during a maintenance window if critical resources are affected.
+
+  Actionable recommendations
+    □  Review module.database.aws_db_instance.primary before applying
+    □  Review module.database.aws_security_group.db before applying
+    □  Review module.network.aws_vpc.main before applying
+    □  Review module.database.module.replica.aws_db_instance.replica1 before applying
+
+  Rollback strategy
+  1. terraform state pull > backup.tfstate (save current state)
+2. terraform destroy -target=<failed resource> (revert specific resource)
+3. terraform apply -var-file=previous.tfvars (re-apply last known good config)
+4. For stateful resources: restore from most recent backup/snapshot (RDS snapshot, EBS snapshot, S3 versioning)
+
+  Next steps
+    →  1. DO NOT apply this plan to production without explicit approval from your team lead
+    →  2. Review each CRITICAL finding above and ensure recovery plans are in place
+    →  3. Take a state backup: terraform state pull > backup-$(date +%Y%m%d-%H%M%S).tfstate
+    →  4. Apply in staging first if possible, then schedule production apply during a maintenance window
+
+
+──── 3 critical  ·  1 high  ·  1 medium  ·  1 low ──────────

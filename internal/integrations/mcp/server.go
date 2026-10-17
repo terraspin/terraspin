@@ -9,7 +9,6 @@ import (
 	"maps"
 	"slices"
 	"strings"
-	"time"
 
 	server "github.com/mark3labs/mcp-go/server"
 
@@ -178,8 +177,8 @@ func handleAnalyzePlan(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 	}
 
 	summaryJSON, _ := json.Marshal(map[string]any{
-		"overall_risk":     string(score.Overall.Tier),
-		"overall_score":    score.Overall.Score,
+		"overall_risk":      string(score.Overall.Tier),
+		"overall_score":     score.Overall.Score,
 		"terraform_version": ast.TerraformVersion,
 		"tier_counts": map[string]int{
 			"critical": score.Counts[analyzer.TierCritical],
@@ -457,7 +456,6 @@ func handleSuggestRollback(ctx context.Context, req mcp.CallToolRequest) (*mcp.C
 
 	var b strings.Builder
 	b.WriteString("## Rollback Strategy\n\n")
-	b.WriteString(fmt.Sprintf("**Generated:** %s\n\n", time.Now().UTC().Format(time.RFC3339)))
 
 	if failurePoint != "" {
 		b.WriteString(fmt.Sprintf("**Failure point:** `%s`\n\n", failurePoint))

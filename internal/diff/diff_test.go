@@ -102,6 +102,31 @@ func findChange(t *testing.T, changes []AttributeDiff, path string) AttributeDif
 	return AttributeDiff{}
 }
 
+func TestCompareASTsOrdersAttributeChangesDeterministically(t *testing.T) {
+	left := &parser.PlanAST{Changes: []parser.ResourceChange{{
+		Address: "example.ordered", Type: "example", Action: parser.ActionUpdate,
+		Before: map[string]any{"delta": 1, "alpha": 1, "charlie": 1, "bravo": 1},
+		After:  map[string]any{"delta": 2, "alpha": 2, "charlie": 2, "bravo": 2},
+	}}}
+
+	right := &parser.PlanAST{Changes: []parser.ResourceChange{{
+		Address: "example.ordered", Type: "example", Action: parser.ActionUpdate,
+		Before: map[string]any{"delta": 2, "alpha": 2, "charlie": 2, "bravo": 2},
+		After:  map[string]any{"delta": 2, "alpha": 2, "charlie": 2, "bravo": 2},
+	}}}
+	want := []string{"alpha", "bravo", "charlie", "delta"}
+	for range 100 {
+		gotResult := CompareASTs(left, right, "left", "right")
+		got := make([]string, len(gotResult.Diffs[0].Changes))
+		for i, change := range gotResult.Diffs[0].Changes {
+			got[i] = change.Path
+		}
+		if strings.Join(got, ",") != strings.Join(want, ",") {
+			t.Fatalf("attribute paths = %v, want sorted %v", got, want)
+		}
+	}
+}
+
 func TestCompareASTs_detectsRemovedResources(t *testing.T) {
 	planA := &parser.PlanAST{
 		Changes: []parser.ResourceChange{

@@ -1,0 +1,11 @@
+## 🌀 Terraspin Drift Analysis
+
+**plan-a** → **plan-b**  ·  Terraform 1.7.2 vs 1.7.2
+
+**Summary:** 1 modified
+
+### MODIFIED Resources
+
+| Resource | Type | Details |
+|----------|------|--------|
+| `example_sensitive_resource.test` | `example_sensitive_resource` | `api_token`: [SENSITIVE REDACTED] → [SENSITIVE REDACTED]<br>`connections`: [SENSITIVE REDACTED] → [SENSITIVE REDACTED]<br>`secret_tree.children`: [SENSITIVE REDACTED] → [SENSITIVE REDACTED]<br>`secret_tree.key`: [SENSITIVE REDACTED] → [SENSITIVE REDACTED]<br>`tokens`: [SENSITIVE REDACTED] → [SENSITIVE REDACTED]<br> |
