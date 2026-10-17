@@ -2,7 +2,7 @@
 
 ## Prerequisites
 
-- Go 1.24+
+- Go 1.25.5+
 - Optional: [Nix](https://nixos.org) for the provided `shell.nix` development environment
 
 ## Dev environment
@@ -12,10 +12,12 @@
 nix-shell
 
 # Without Nix: install manually
-# Go 1.24, terraform/opentofu, golangci-lint, gotestsum, gofumpt
+# Go 1.25.5+, terraform/opentofu, golangci-lint, gotestsum, gofumpt
 ```
 
-The shell includes: Go 1.24, golangci-lint, goreleaser, gofumpt, gotestsum, terraform, opentofu, ollama, gh, jq, yq-go, shellcheck, cosign.
+The shell includes: Go (1.25.5+ required), golangci-lint, goreleaser, gofumpt, gotestsum, terraform, opentofu, ollama, gh, jq, yq-go, shellcheck, cosign.
+
+Go 1.25.5+ is the floor in `go.mod`, required by `mcp-go v0.58.0`; CI tests that floor and stable, and releases build with stable.
 
 ## Build
 
