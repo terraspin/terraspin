@@ -1,0 +1,68 @@
+## 🌀 Terraspin Plan Analysis
+
+**Terraform:** 1.7.2  ·  **Risk:** critical (100)
+
+| Action | Count |
+|--------|-------|
+| create | 1 |
+| update | 1 |
+| delete | 1 |
+| replace | 1 |
+
+### Infrastructure Summary
+1 Database, 1 Networking, 1 Security, 1 Compute
+
+### Risk
+**Score:** 100/100  ·  **Level:** CRITICAL
+
+### Resource Changes
+1 create, 1 update, 1 delete, 1 replace
+
+### Blast Radius
+No cascading dependencies detected
+
+### ⚠ Critical Findings
+- [CRITICAL] aws_db_instance.primary → DELETE: No direct blast radius detected, but review dependent resources manually
+- [CRITICAL] aws_security_group.web → REPLACE: No direct blast radius detected, but review dependent resources manually
+
+### Affected Resources by Severity
+- **[CRITICAL]** aws_db_instance.primary, aws_security_group.web
+- **[MEDIUM]** module.network.aws_vpc.main
+- **[LOW]** aws_instance.web
+
+
+### Summary
+This plan affects 1 Database, 1 Networking, 1 Security, 1 Compute infrastructure with overall risk CRITICAL (100/100). 2 changes need immediate review.
+
+### Critical Changes
+- aws_db_instance.primary → delete (score: 100.0)
+- aws_security_group.web → replace (score: 100.0)
+
+### Risk Assessment
+Plan scored critical (100/100) with 2 critical or high-risk changes. Changes to databases, networking, DNS, or IAM can cause cascading outages. Verify dependencies, ensure rollback plans are in place, and apply during a maintenance window if critical resources are affected.
+
+### Actionable Recommendations
+- [ ] Review aws_db_instance.primary before applying
+- [ ] Review aws_security_group.web before applying
+
+### Rollback Strategy
+1. terraform state pull > backup.tfstate (save current state)
+2. terraform destroy -target=<failed resource> (revert specific resource)
+3. terraform apply -var-file=previous.tfvars (re-apply last known good config)
+4. For stateful resources: restore from most recent backup/snapshot (RDS snapshot, EBS snapshot, S3 versioning)
+
+### Next Steps
+1. DO NOT apply this plan to production without explicit approval from your team lead
+2. Review each CRITICAL finding above and ensure recovery plans are in place
+3. Take a state backup: terraform state pull > backup-$(date +%Y%m%d-%H%M%S).tfstate
+4. Apply in staging first if possible, then schedule production apply during a maintenance window
+
+
+### Risk Breakdown
+
+| Tier | Count |
+|------|-------|
+| critical | 2 |
+| high | 0 |
+| medium | 1 |
+| low | 1 |

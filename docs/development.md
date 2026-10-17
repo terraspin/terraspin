@@ -38,6 +38,10 @@ gotestsum --format testname ./...
 
 Test files are co-located with their packages (e.g., `internal/parser/parse_test.go`).
 
+## Deterministic output checks
+
+CLI snapshots live in `testdata/golden/`. Review output changes normally; regenerate approved snapshots with `go test ./cmd/terraspin -run TestCLIGolden -update`. Parser fuzzing is seeded from every `testdata/*.json` fixture and can be run with `go test ./internal/parser -fuzz=FuzzParsePlan -fuzztime=60s`.
+
 ## Lint
 
 ```bash
