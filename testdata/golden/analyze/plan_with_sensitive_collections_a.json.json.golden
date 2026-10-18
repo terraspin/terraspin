@@ -1,0 +1,56 @@
+{
+  "terraform_version": "1.7.2",
+  "resource_counts": {
+    "create": 0,
+    "delete": 0,
+    "replace": 0,
+    "update": 1
+  },
+  "overall_risk": {
+    "score": 20,
+    "tier": "low"
+  },
+  "resource_risks": [
+    {
+      "address": "example_sensitive_resource.test",
+      "action": "update",
+      "score": 20,
+      "tier": "low"
+    }
+  ],
+  "blast_radii": {
+    "example_sensitive_resource.test": {
+      "root_address": "example_sensitive_resource.test",
+      "total_affected": 0
+    }
+  },
+  "narrative": {
+    "provider": "rule-based",
+    "summary": "This plan affects 1 Other infrastructure with overall risk LOW (20/100). 0 changes need immediate review.",
+    "infra_summary": "1 Other",
+    "risk_score": "20/100",
+    "risk_level": "LOW",
+    "resource_change_summary": "1 update",
+    "blast_radius_summary": "No cascading dependencies detected",
+    "affected_by_tier": [
+      {
+        "tier": "low",
+        "resources": [
+          "example_sensitive_resource.test"
+        ]
+      }
+    ],
+    "recommendations": [
+      "Review all changes before applying",
+      "Ensure recent state backup exists",
+      "Verify dependent resources are healthy"
+    ],
+    "next_steps": [
+      "1. Review changes above to confirm they match expectations",
+      "2. Apply at your convenience; risk is moderate or low"
+    ],
+    "critical_changes": null,
+    "risk_assessment": "Plan scored low (20/100) with 0 critical or high-risk changes. Changes to databases, networking, DNS, or IAM can cause cascading outages. Verify dependencies, ensure rollback plans are in place, and apply during a maintenance window if critical resources are affected.",
+    "rollback_strategy": "1. terraform state pull \u003e backup.tfstate (save current state)\n2. terraform destroy -target=\u003cfailed resource\u003e (revert specific resource)\n3. terraform apply -var-file=previous.tfvars (re-apply last known good config)\n4. For stateful resources: restore from most recent backup/snapshot (RDS snapshot, EBS snapshot, S3 versioning)"
+  }
+}

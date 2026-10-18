@@ -1,0 +1,112 @@
+{
+  "terraform_version": "1.7.2",
+  "resource_counts": {
+    "create": 1,
+    "delete": 1,
+    "no-op": 1,
+    "replace": 1,
+    "update": 1
+  },
+  "overall_risk": {
+    "score": 100,
+    "tier": "critical"
+  },
+  "resource_risks": [
+    {
+      "address": "aws_instance.web",
+      "action": "create",
+      "score": 15,
+      "tier": "low"
+    },
+    {
+      "address": "aws_db_instance.primary",
+      "action": "delete",
+      "score": 100,
+      "tier": "critical"
+    },
+    {
+      "address": "module.network.aws_vpc.main",
+      "action": "update",
+      "score": 50,
+      "tier": "medium"
+    },
+    {
+      "address": "aws_security_group.web",
+      "action": "replace",
+      "score": 100,
+      "tier": "critical"
+    }
+  ],
+  "blast_radii": {
+    "aws_db_instance.primary": {
+      "root_address": "aws_db_instance.primary",
+      "total_affected": 0
+    },
+    "aws_instance.web": {
+      "root_address": "aws_instance.web",
+      "total_affected": 0
+    },
+    "aws_s3_bucket.logs": {
+      "root_address": "aws_s3_bucket.logs",
+      "total_affected": 0
+    },
+    "aws_security_group.web": {
+      "root_address": "aws_security_group.web",
+      "total_affected": 0
+    },
+    "module.network.aws_vpc.main": {
+      "root_address": "module.network.aws_vpc.main",
+      "total_affected": 0
+    }
+  },
+  "narrative": {
+    "provider": "rule-based",
+    "summary": "This plan affects 1 Database, 1 Networking, 1 Security, 1 Compute infrastructure with overall risk CRITICAL (100/100). 2 changes need immediate review.",
+    "infra_summary": "1 Database, 1 Networking, 1 Security, 1 Compute",
+    "risk_score": "100/100",
+    "risk_level": "CRITICAL",
+    "resource_change_summary": "1 create, 1 update, 1 delete, 1 replace",
+    "blast_radius_summary": "No cascading dependencies detected",
+    "critical_findings": [
+      "[CRITICAL] aws_db_instance.primary → DELETE: No direct blast radius detected, but review dependent resources manually",
+      "[CRITICAL] aws_security_group.web → REPLACE: No direct blast radius detected, but review dependent resources manually"
+    ],
+    "affected_by_tier": [
+      {
+        "tier": "critical",
+        "resources": [
+          "aws_db_instance.primary",
+          "aws_security_group.web"
+        ]
+      },
+      {
+        "tier": "medium",
+        "resources": [
+          "module.network.aws_vpc.main"
+        ]
+      },
+      {
+        "tier": "low",
+        "resources": [
+          "aws_instance.web"
+        ]
+      }
+    ],
+    "recommendations": [
+      "Review aws_db_instance.primary before applying",
+      "Review aws_security_group.web before applying"
+    ],
+    "next_steps": [
+      "1. DO NOT apply this plan to production without explicit approval from your team lead",
+      "2. Review each CRITICAL finding above and ensure recovery plans are in place",
+      "3. Take a state backup: terraform state pull \u003e backup-$(date +%Y%m%d-%H%M%S).tfstate",
+      "4. Apply in staging first if possible, then schedule production apply during a maintenance window"
+    ],
+    "critical_changes": [
+      "aws_db_instance.primary → delete (score: 100.0)",
+      "aws_security_group.web → replace (score: 100.0)"
+    ],
+    "risk_assessment": "Plan scored critical (100/100) with 2 critical or high-risk changes. Changes to databases, networking, DNS, or IAM can cause cascading outages. Verify dependencies, ensure rollback plans are in place, and apply during a maintenance window if critical resources are affected.",
+    "rollback_strategy": "1. terraform state pull \u003e backup.tfstate (save current state)\n2. terraform destroy -target=\u003cfailed resource\u003e (revert specific resource)\n3. terraform apply -var-file=previous.tfvars (re-apply last known good config)\n4. For stateful resources: restore from most recent backup/snapshot (RDS snapshot, EBS snapshot, S3 versioning)"
+  }
+}

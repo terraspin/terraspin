@@ -1,0 +1,74 @@
+┌─ Terraspin Plan Analysis ──────────────────────────────────┐
+│  14 resources  ·  terraform 1.8.0
+└────────────────────────────────────────────────────────────┘
+
+  Overall Risk  CRITICAL (score: 100)
+
+  0 to create  ·  11 to update  ·  3 to delete  ·  0 to replace
+
+──── Critical & High Risk Changes ────────────────────────────
+
+  [CRITICAL 100.0]  aws_db_instance.primary  →  DELETE
+  Blast radius: 9 resources affected
+    ├── aws_lambda_function.direct0
+    ├── aws_lambda_function.direct1
+    ├── aws_lambda_function.direct2
+    ├── aws_lambda_function.direct3
+    ├── aws_lambda_function.direct4
+    ├── aws_lambda_function.direct5
+
+  [CRITICAL 100.0]  aws_db_instance.alpha  →  DELETE
+  Blast radius: 1 resources affected
+    ├── aws_lambda_function.alpha_dependent
+
+  [CRITICAL 100.0]  aws_db_instance.beta  →  DELETE
+  Blast radius: 1 resources affected
+    ├── aws_lambda_function.beta_dependent
+
+──── Analysis ────────────────────────────────────────────────
+
+  Infrastructure summary
+  3 Database, 11 Serverless
+
+  Risk score: 100/100  ·  Risk level: CRITICAL
+
+  Resource change summary
+  11 update, 3 delete
+
+  Blast radius summary
+  14 dependent resources may be affected across all changes. Largest blast: aws_db_instance.primary (9 downstream resources)
+
+  Critical findings
+    ⚠  [CRITICAL] aws_db_instance.primary → DELETE: Blast radius of 9 dependent resources (incl. aws_lambda_function.direct0 (incl. aws_lambda_function.direct1 (incl. aws_lambda_function.direct2 (incl. aws_lambda_function.direct3 (incl. aws_lambda_function.direct4 (incl. aws_lambda_function.direct5)
+    ⚠  [CRITICAL] aws_db_instance.alpha → DELETE: Blast radius of 1 dependent resources (incl. aws_lambda_function.alpha_dependent)
+    ⚠  [CRITICAL] aws_db_instance.beta → DELETE: Blast radius of 1 dependent resources (incl. aws_lambda_function.beta_dependent)
+
+  Affected resources by severity
+    [CRITICAL] aws_db_instance.primary, aws_db_instance.alpha, aws_db_instance.beta
+    [LOW] aws_lambda_function.direct0, aws_lambda_function.direct1, aws_lambda_function.direct2, aws_lambda_function.direct3, aws_lambda_function.direct4, aws_lambda_function.direct5, aws_lambda_function.transitive0, aws_lambda_function.transitive1, aws_lambda_function.transitive2, aws_lambda_function.alpha_dependent, aws_lambda_function.beta_dependent
+
+  Summary
+  This plan affects 3 Database, 11 Serverless infrastructure with overall risk CRITICAL (100/100). 3 changes need immediate review.
+
+  Risk assessment
+  Plan scored critical (100/100) with 3 critical or high-risk changes. Changes to databases, networking, DNS, or IAM can cause cascading outages. Verify dependencies, ensure rollback plans are in place, and apply during a maintenance window if critical resources are affected.
+
+  Actionable recommendations
+    □  Verify aws_db_instance.primary is backed up and can be restored before applying — blast radius: 9 resources
+    □  Verify aws_db_instance.alpha is backed up and can be restored before applying — blast radius: 1 resources
+    □  Verify aws_db_instance.beta is backed up and can be restored before applying — blast radius: 1 resources
+
+  Rollback strategy
+  1. terraform state pull > backup.tfstate (save current state)
+2. terraform destroy -target=<failed resource> (revert specific resource)
+3. terraform apply -var-file=previous.tfvars (re-apply last known good config)
+4. For stateful resources: restore from most recent backup/snapshot (RDS snapshot, EBS snapshot, S3 versioning)
+
+  Next steps
+    →  1. DO NOT apply this plan to production without explicit approval from your team lead
+    →  2. Review each CRITICAL finding above and ensure recovery plans are in place
+    →  3. Take a state backup: terraform state pull > backup-$(date +%Y%m%d-%H%M%S).tfstate
+    →  4. Apply in staging first if possible, then schedule production apply during a maintenance window
+
+
+──── 3 critical  ·  0 high  ·  0 medium  ·  11 low ──────────

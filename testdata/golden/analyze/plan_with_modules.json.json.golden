@@ -1,0 +1,145 @@
+{
+  "terraform_version": "1.7.2",
+  "resource_counts": {
+    "create": 1,
+    "delete": 2,
+    "no-op": 1,
+    "replace": 1,
+    "update": 2
+  },
+  "overall_risk": {
+    "score": 100,
+    "tier": "critical"
+  },
+  "resource_risks": [
+    {
+      "address": "aws_instance.gateway",
+      "action": "update",
+      "score": 30,
+      "tier": "medium"
+    },
+    {
+      "address": "module.database.aws_db_instance.primary",
+      "action": "replace",
+      "score": 100,
+      "tier": "critical"
+    },
+    {
+      "address": "module.database.aws_security_group.db",
+      "action": "delete",
+      "score": 100,
+      "tier": "critical"
+    },
+    {
+      "address": "module.network.aws_vpc.main",
+      "action": "delete",
+      "score": 100,
+      "tier": "critical"
+    },
+    {
+      "address": "module.network.aws_subnet.private",
+      "action": "create",
+      "score": 25,
+      "tier": "low"
+    },
+    {
+      "address": "module.database.module.replica.aws_db_instance.replica1",
+      "action": "update",
+      "score": 60,
+      "tier": "high"
+    }
+  ],
+  "blast_radii": {
+    "aws_instance.gateway": {
+      "root_address": "aws_instance.gateway",
+      "total_affected": 0
+    },
+    "module.database.aws_db_instance.primary": {
+      "root_address": "module.database.aws_db_instance.primary",
+      "total_affected": 0
+    },
+    "module.database.aws_db_subnet_group.main": {
+      "root_address": "module.database.aws_db_subnet_group.main",
+      "total_affected": 0
+    },
+    "module.database.aws_security_group.db": {
+      "root_address": "module.database.aws_security_group.db",
+      "total_affected": 0
+    },
+    "module.database.module.replica.aws_db_instance.replica1": {
+      "root_address": "module.database.module.replica.aws_db_instance.replica1",
+      "total_affected": 0
+    },
+    "module.network.aws_subnet.private": {
+      "root_address": "module.network.aws_subnet.private",
+      "total_affected": 0
+    },
+    "module.network.aws_vpc.main": {
+      "root_address": "module.network.aws_vpc.main",
+      "total_affected": 0
+    }
+  },
+  "narrative": {
+    "provider": "rule-based",
+    "summary": "This plan affects 2 Database, 2 Networking, 1 Security, 1 Compute infrastructure with overall risk CRITICAL (100/100). 4 changes need immediate review.",
+    "infra_summary": "2 Database, 2 Networking, 1 Security, 1 Compute",
+    "risk_score": "100/100",
+    "risk_level": "CRITICAL",
+    "resource_change_summary": "1 create, 2 update, 2 delete, 1 replace",
+    "blast_radius_summary": "No cascading dependencies detected",
+    "critical_findings": [
+      "[CRITICAL] module.database.aws_db_instance.primary → REPLACE: No direct blast radius detected, but review dependent resources manually",
+      "[CRITICAL] module.database.aws_security_group.db → DELETE: No direct blast radius detected, but review dependent resources manually",
+      "[CRITICAL] module.network.aws_vpc.main → DELETE: No direct blast radius detected, but review dependent resources manually",
+      "[HIGH] module.database.module.replica.aws_db_instance.replica1 → UPDATE: No direct blast radius detected, but review dependent resources manually"
+    ],
+    "affected_by_tier": [
+      {
+        "tier": "critical",
+        "resources": [
+          "module.database.aws_db_instance.primary",
+          "module.database.aws_security_group.db",
+          "module.network.aws_vpc.main"
+        ]
+      },
+      {
+        "tier": "high",
+        "resources": [
+          "module.database.module.replica.aws_db_instance.replica1"
+        ]
+      },
+      {
+        "tier": "medium",
+        "resources": [
+          "aws_instance.gateway"
+        ]
+      },
+      {
+        "tier": "low",
+        "resources": [
+          "module.network.aws_subnet.private"
+        ]
+      }
+    ],
+    "recommendations": [
+      "Review module.database.aws_db_instance.primary before applying",
+      "Review module.database.aws_security_group.db before applying",
+      "Review module.network.aws_vpc.main before applying",
+      "Review module.database.module.replica.aws_db_instance.replica1 before applying"
+    ],
+    "next_steps": [
+      "1. DO NOT apply this plan to production without explicit approval from your team lead",
+      "2. Review each CRITICAL finding above and ensure recovery plans are in place",
+      "3. Take a state backup: terraform state pull \u003e backup-$(date +%Y%m%d-%H%M%S).tfstate",
+      "4. Apply in staging first if possible, then schedule production apply during a maintenance window"
+    ],
+    "critical_changes": [
+      "module.database.aws_db_instance.primary → replace (score: 100.0)",
+      "module.database.aws_security_group.db → delete (score: 100.0)",
+      "module.network.aws_vpc.main → delete (score: 100.0)",
+      "module.database.module.replica.aws_db_instance.replica1 → update (score: 60.0)"
+    ],
+    "risk_assessment": "Plan scored critical (100/100) with 4 critical or high-risk changes. Changes to databases, networking, DNS, or IAM can cause cascading outages. Verify dependencies, ensure rollback plans are in place, and apply during a maintenance window if critical resources are affected.",
+    "rollback_strategy": "1. terraform state pull \u003e backup.tfstate (save current state)\n2. terraform destroy -target=\u003cfailed resource\u003e (revert specific resource)\n3. terraform apply -var-file=previous.tfvars (re-apply last known good config)\n4. For stateful resources: restore from most recent backup/snapshot (RDS snapshot, EBS snapshot, S3 versioning)"
+  }
+}

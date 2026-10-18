@@ -236,11 +236,7 @@ func collectKeys(a, b map[string]any) []string {
 	for k := range b {
 		seen[k] = struct{}{}
 	}
-	keys := make([]string, 0, len(seen))
-	for k := range seen {
-		keys = append(keys, k)
-	}
-	return keys
+	return slices.Sorted(maps.Keys(seen))
 }
 
 // valuesEqual compares two values using reflect.DeepEqual as fallback.

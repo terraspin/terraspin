@@ -1,0 +1,96 @@
+{
+  "terraform_version": "1.7.2",
+  "resource_counts": {
+    "create": 1,
+    "delete": 1,
+    "replace": 0,
+    "update": 1
+  },
+  "overall_risk": {
+    "score": 100,
+    "tier": "critical"
+  },
+  "resource_risks": [
+    {
+      "address": "aws_iam_access_key.deployer",
+      "action": "create",
+      "score": 10,
+      "tier": "low"
+    },
+    {
+      "address": "aws_s3_bucket.data",
+      "action": "delete",
+      "score": 100,
+      "tier": "critical"
+    },
+    {
+      "address": "aws_db_instance.replica",
+      "action": "update",
+      "score": 60,
+      "tier": "high"
+    }
+  ],
+  "blast_radii": {
+    "aws_db_instance.replica": {
+      "root_address": "aws_db_instance.replica",
+      "total_affected": 0
+    },
+    "aws_iam_access_key.deployer": {
+      "root_address": "aws_iam_access_key.deployer",
+      "total_affected": 0
+    },
+    "aws_s3_bucket.data": {
+      "root_address": "aws_s3_bucket.data",
+      "total_affected": 0
+    }
+  },
+  "narrative": {
+    "provider": "rule-based",
+    "summary": "This plan affects 1 Database, 1 Storage, 1 IAM infrastructure with overall risk CRITICAL (100/100). 2 changes need immediate review.",
+    "infra_summary": "1 Database, 1 Storage, 1 IAM",
+    "risk_score": "100/100",
+    "risk_level": "CRITICAL",
+    "resource_change_summary": "1 create, 1 update, 1 delete",
+    "blast_radius_summary": "No cascading dependencies detected",
+    "critical_findings": [
+      "[CRITICAL] aws_s3_bucket.data → DELETE: No direct blast radius detected, but review dependent resources manually",
+      "[HIGH] aws_db_instance.replica → UPDATE: No direct blast radius detected, but review dependent resources manually"
+    ],
+    "affected_by_tier": [
+      {
+        "tier": "critical",
+        "resources": [
+          "aws_s3_bucket.data"
+        ]
+      },
+      {
+        "tier": "high",
+        "resources": [
+          "aws_db_instance.replica"
+        ]
+      },
+      {
+        "tier": "low",
+        "resources": [
+          "aws_iam_access_key.deployer"
+        ]
+      }
+    ],
+    "recommendations": [
+      "Review aws_s3_bucket.data before applying",
+      "Review aws_db_instance.replica before applying"
+    ],
+    "next_steps": [
+      "1. DO NOT apply this plan to production without explicit approval from your team lead",
+      "2. Review each CRITICAL finding above and ensure recovery plans are in place",
+      "3. Take a state backup: terraform state pull \u003e backup-$(date +%Y%m%d-%H%M%S).tfstate",
+      "4. Apply in staging first if possible, then schedule production apply during a maintenance window"
+    ],
+    "critical_changes": [
+      "aws_s3_bucket.data → delete (score: 100.0)",
+      "aws_db_instance.replica → update (score: 60.0)"
+    ],
+    "risk_assessment": "Plan scored critical (100/100) with 2 critical or high-risk changes. Changes to databases, networking, DNS, or IAM can cause cascading outages. Verify dependencies, ensure rollback plans are in place, and apply during a maintenance window if critical resources are affected.",
+    "rollback_strategy": "1. terraform state pull \u003e backup.tfstate (save current state)\n2. terraform destroy -target=\u003cfailed resource\u003e (revert specific resource)\n3. terraform apply -var-file=previous.tfvars (re-apply last known good config)\n4. For stateful resources: restore from most recent backup/snapshot (RDS snapshot, EBS snapshot, S3 versioning)"
+  }
+}

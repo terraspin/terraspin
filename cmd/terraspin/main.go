@@ -283,7 +283,7 @@ func buildRuleNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast ma
 	for addr, br := range blast {
 		if br.TotalAffected > 0 {
 			totalBlast += br.TotalAffected
-			if br.TotalAffected > maxBlast {
+			if br.TotalAffected > maxBlast || (br.TotalAffected == maxBlast && (maxBlastAddr == "" || addr < maxBlastAddr)) {
 				maxBlast = br.TotalAffected
 				maxBlastAddr = addr
 			}

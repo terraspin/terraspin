@@ -1,10 +1,38 @@
 package analyzer
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/terraspin/terraspin/internal/parser"
 )
+
+func TestAnalyzeBlastRadiusOrdersDependentsDeterministically(t *testing.T) {
+	changes := []parser.ResourceChange{{Address: "aws_db_instance.primary", Action: parser.ActionDelete}}
+	refs := map[string][]string{
+		"aws_lambda_function.delta":   {"aws_db_instance.primary"},
+		"aws_lambda_function.alpha":   {"aws_db_instance.primary"},
+		"aws_lambda_function.charlie": {"aws_db_instance.primary"},
+		"aws_lambda_function.bravo":   {"aws_db_instance.primary"},
+	}
+	want := []string{
+		"aws_lambda_function.alpha",
+		"aws_lambda_function.bravo",
+		"aws_lambda_function.charlie",
+		"aws_lambda_function.delta",
+	}
+
+	for range 100 {
+		gotRadius := AnalyzeBlastRadius(changes, refs)["aws_db_instance.primary"]
+		got := make([]string, len(gotRadius.DirectDeps))
+		for i, dep := range gotRadius.DirectDeps {
+			got[i] = dep.Address
+		}
+		if !slices.Equal(got, want) {
+			t.Fatalf("direct dependents = %v, want sorted %v", got, want)
+		}
+	}
+}
 
 func TestParseDependencyRefs_nilOnNoConfiguration(t *testing.T) {
 	data := []byte(`{"format_version": "1.2"}`)
@@ -46,8 +74,8 @@ func TestAnalyzeBlastRadius_directDependentsFound(t *testing.T) {
 	}
 	// db is referenced by lambda and ssm parameter
 	refs := map[string][]string{
-		"aws_lambda_function.api":          {"aws_db_instance.primary"},
-		"aws_ssm_parameter.db_url":        {"aws_db_instance.primary"},
+		"aws_lambda_function.api":  {"aws_db_instance.primary"},
+		"aws_ssm_parameter.db_url": {"aws_db_instance.primary"},
 	}
 	result := AnalyzeBlastRadius(changes, refs)
 

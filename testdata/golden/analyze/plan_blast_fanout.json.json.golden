@@ -1,0 +1,299 @@
+{
+  "terraform_version": "1.8.0",
+  "resource_counts": {
+    "create": 0,
+    "delete": 3,
+    "replace": 0,
+    "update": 11
+  },
+  "overall_risk": {
+    "score": 100,
+    "tier": "critical"
+  },
+  "resource_risks": [
+    {
+      "address": "aws_db_instance.primary",
+      "action": "delete",
+      "score": 100,
+      "tier": "critical"
+    },
+    {
+      "address": "aws_db_instance.alpha",
+      "action": "delete",
+      "score": 100,
+      "tier": "critical"
+    },
+    {
+      "address": "aws_db_instance.beta",
+      "action": "delete",
+      "score": 100,
+      "tier": "critical"
+    },
+    {
+      "address": "aws_lambda_function.direct0",
+      "action": "update",
+      "score": 24,
+      "tier": "low"
+    },
+    {
+      "address": "aws_lambda_function.direct1",
+      "action": "update",
+      "score": 24,
+      "tier": "low"
+    },
+    {
+      "address": "aws_lambda_function.direct2",
+      "action": "update",
+      "score": 24,
+      "tier": "low"
+    },
+    {
+      "address": "aws_lambda_function.direct3",
+      "action": "update",
+      "score": 24,
+      "tier": "low"
+    },
+    {
+      "address": "aws_lambda_function.direct4",
+      "action": "update",
+      "score": 24,
+      "tier": "low"
+    },
+    {
+      "address": "aws_lambda_function.direct5",
+      "action": "update",
+      "score": 24,
+      "tier": "low"
+    },
+    {
+      "address": "aws_lambda_function.transitive0",
+      "action": "update",
+      "score": 24,
+      "tier": "low"
+    },
+    {
+      "address": "aws_lambda_function.transitive1",
+      "action": "update",
+      "score": 24,
+      "tier": "low"
+    },
+    {
+      "address": "aws_lambda_function.transitive2",
+      "action": "update",
+      "score": 24,
+      "tier": "low"
+    },
+    {
+      "address": "aws_lambda_function.alpha_dependent",
+      "action": "update",
+      "score": 24,
+      "tier": "low"
+    },
+    {
+      "address": "aws_lambda_function.beta_dependent",
+      "action": "update",
+      "score": 24,
+      "tier": "low"
+    }
+  ],
+  "blast_radii": {
+    "aws_db_instance.alpha": {
+      "root_address": "aws_db_instance.alpha",
+      "direct_deps": [
+        {
+          "address": "aws_lambda_function.alpha_dependent",
+          "type": "aws_lambda_function",
+          "hops": 1
+        }
+      ],
+      "total_affected": 1
+    },
+    "aws_db_instance.beta": {
+      "root_address": "aws_db_instance.beta",
+      "direct_deps": [
+        {
+          "address": "aws_lambda_function.beta_dependent",
+          "type": "aws_lambda_function",
+          "hops": 1
+        }
+      ],
+      "total_affected": 1
+    },
+    "aws_db_instance.primary": {
+      "root_address": "aws_db_instance.primary",
+      "direct_deps": [
+        {
+          "address": "aws_lambda_function.direct0",
+          "type": "aws_lambda_function",
+          "hops": 1
+        },
+        {
+          "address": "aws_lambda_function.direct1",
+          "type": "aws_lambda_function",
+          "hops": 1
+        },
+        {
+          "address": "aws_lambda_function.direct2",
+          "type": "aws_lambda_function",
+          "hops": 1
+        },
+        {
+          "address": "aws_lambda_function.direct3",
+          "type": "aws_lambda_function",
+          "hops": 1
+        },
+        {
+          "address": "aws_lambda_function.direct4",
+          "type": "aws_lambda_function",
+          "hops": 1
+        },
+        {
+          "address": "aws_lambda_function.direct5",
+          "type": "aws_lambda_function",
+          "hops": 1
+        }
+      ],
+      "transitive_deps": [
+        {
+          "address": "aws_lambda_function.transitive0",
+          "type": "aws_lambda_function",
+          "hops": 2
+        },
+        {
+          "address": "aws_lambda_function.transitive1",
+          "type": "aws_lambda_function",
+          "hops": 2
+        },
+        {
+          "address": "aws_lambda_function.transitive2",
+          "type": "aws_lambda_function",
+          "hops": 2
+        }
+      ],
+      "total_affected": 9
+    },
+    "aws_lambda_function.alpha_dependent": {
+      "root_address": "aws_lambda_function.alpha_dependent",
+      "total_affected": 0
+    },
+    "aws_lambda_function.beta_dependent": {
+      "root_address": "aws_lambda_function.beta_dependent",
+      "total_affected": 0
+    },
+    "aws_lambda_function.direct0": {
+      "root_address": "aws_lambda_function.direct0",
+      "direct_deps": [
+        {
+          "address": "aws_lambda_function.transitive0",
+          "type": "aws_lambda_function",
+          "hops": 1
+        }
+      ],
+      "total_affected": 1
+    },
+    "aws_lambda_function.direct1": {
+      "root_address": "aws_lambda_function.direct1",
+      "direct_deps": [
+        {
+          "address": "aws_lambda_function.transitive1",
+          "type": "aws_lambda_function",
+          "hops": 1
+        }
+      ],
+      "total_affected": 1
+    },
+    "aws_lambda_function.direct2": {
+      "root_address": "aws_lambda_function.direct2",
+      "direct_deps": [
+        {
+          "address": "aws_lambda_function.transitive2",
+          "type": "aws_lambda_function",
+          "hops": 1
+        }
+      ],
+      "total_affected": 1
+    },
+    "aws_lambda_function.direct3": {
+      "root_address": "aws_lambda_function.direct3",
+      "total_affected": 0
+    },
+    "aws_lambda_function.direct4": {
+      "root_address": "aws_lambda_function.direct4",
+      "total_affected": 0
+    },
+    "aws_lambda_function.direct5": {
+      "root_address": "aws_lambda_function.direct5",
+      "total_affected": 0
+    },
+    "aws_lambda_function.transitive0": {
+      "root_address": "aws_lambda_function.transitive0",
+      "total_affected": 0
+    },
+    "aws_lambda_function.transitive1": {
+      "root_address": "aws_lambda_function.transitive1",
+      "total_affected": 0
+    },
+    "aws_lambda_function.transitive2": {
+      "root_address": "aws_lambda_function.transitive2",
+      "total_affected": 0
+    }
+  },
+  "narrative": {
+    "provider": "rule-based",
+    "summary": "This plan affects 3 Database, 11 Serverless infrastructure with overall risk CRITICAL (100/100). 3 changes need immediate review.",
+    "infra_summary": "3 Database, 11 Serverless",
+    "risk_score": "100/100",
+    "risk_level": "CRITICAL",
+    "resource_change_summary": "11 update, 3 delete",
+    "blast_radius_summary": "14 dependent resources may be affected across all changes. Largest blast: aws_db_instance.primary (9 downstream resources)",
+    "critical_findings": [
+      "[CRITICAL] aws_db_instance.primary → DELETE: Blast radius of 9 dependent resources (incl. aws_lambda_function.direct0 (incl. aws_lambda_function.direct1 (incl. aws_lambda_function.direct2 (incl. aws_lambda_function.direct3 (incl. aws_lambda_function.direct4 (incl. aws_lambda_function.direct5)",
+      "[CRITICAL] aws_db_instance.alpha → DELETE: Blast radius of 1 dependent resources (incl. aws_lambda_function.alpha_dependent)",
+      "[CRITICAL] aws_db_instance.beta → DELETE: Blast radius of 1 dependent resources (incl. aws_lambda_function.beta_dependent)"
+    ],
+    "affected_by_tier": [
+      {
+        "tier": "critical",
+        "resources": [
+          "aws_db_instance.primary",
+          "aws_db_instance.alpha",
+          "aws_db_instance.beta"
+        ]
+      },
+      {
+        "tier": "low",
+        "resources": [
+          "aws_lambda_function.direct0",
+          "aws_lambda_function.direct1",
+          "aws_lambda_function.direct2",
+          "aws_lambda_function.direct3",
+          "aws_lambda_function.direct4",
+          "aws_lambda_function.direct5",
+          "aws_lambda_function.transitive0",
+          "aws_lambda_function.transitive1",
+          "aws_lambda_function.transitive2",
+          "aws_lambda_function.alpha_dependent",
+          "aws_lambda_function.beta_dependent"
+        ]
+      }
+    ],
+    "recommendations": [
+      "Verify aws_db_instance.primary is backed up and can be restored before applying — blast radius: 9 resources",
+      "Verify aws_db_instance.alpha is backed up and can be restored before applying — blast radius: 1 resources",
+      "Verify aws_db_instance.beta is backed up and can be restored before applying — blast radius: 1 resources"
+    ],
+    "next_steps": [
+      "1. DO NOT apply this plan to production without explicit approval from your team lead",
+      "2. Review each CRITICAL finding above and ensure recovery plans are in place",
+      "3. Take a state backup: terraform state pull \u003e backup-$(date +%Y%m%d-%H%M%S).tfstate",
+      "4. Apply in staging first if possible, then schedule production apply during a maintenance window"
+    ],
+    "critical_changes": [
+      "aws_db_instance.primary → delete (score: 100.0)",
+      "aws_db_instance.alpha → delete (score: 100.0)",
+      "aws_db_instance.beta → delete (score: 100.0)"
+    ],
+    "risk_assessment": "Plan scored critical (100/100) with 3 critical or high-risk changes. Changes to databases, networking, DNS, or IAM can cause cascading outages. Verify dependencies, ensure rollback plans are in place, and apply during a maintenance window if critical resources are affected.",
+    "rollback_strategy": "1. terraform state pull \u003e backup.tfstate (save current state)\n2. terraform destroy -target=\u003cfailed resource\u003e (revert specific resource)\n3. terraform apply -var-file=previous.tfvars (re-apply last known good config)\n4. For stateful resources: restore from most recent backup/snapshot (RDS snapshot, EBS snapshot, S3 versioning)"
+  }
+}

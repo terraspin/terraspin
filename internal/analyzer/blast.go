@@ -3,6 +3,8 @@ package analyzer
 
 import (
 	"encoding/json"
+	"maps"
+	"slices"
 	"strings"
 
 	"github.com/terraspin/terraspin/internal/parser"
@@ -53,7 +55,7 @@ func AnalyzeBlastRadius(changes []parser.ResourceChange, refs map[string][]strin
 			queue = queue[1:]
 			curDist := visited[cur]
 
-			for dep := range rev[cur] {
+			for _, dep := range slices.Sorted(maps.Keys(rev[cur])) {
 				if _, seen := visited[dep]; seen {
 					continue
 				}
@@ -105,7 +107,8 @@ func ParseDependencyRefs(data []byte) map[string][]string {
 
 	out := make(map[string][]string)
 	for _, r := range raw.Configuration.RootModule.Resources {
-		for _, expr := range r.Expressions {
+		for _, name := range slices.Sorted(maps.Keys(r.Expressions)) {
+			expr := r.Expressions[name]
 			for _, ref := range expr.References {
 				if isResourceRef(ref) {
 					out[r.Address] = append(out[r.Address], extractResourceAddr(ref))

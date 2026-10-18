@@ -1,0 +1,50 @@
+## 🌀 Terraspin Plan Analysis
+
+**Terraform:** 1.7.2  ·  **Risk:** low (0)
+
+| Action | Count |
+|--------|-------|
+
+### Infrastructure Summary
+no resources
+
+### Risk
+**Score:** 0/100  ·  **Level:** LOW
+
+### Resource Changes
+no changes
+
+### Blast Radius
+No cascading dependencies detected
+
+
+### Summary
+This plan affects no resources infrastructure with overall risk LOW (0/100). 0 changes need immediate review.
+
+### Risk Assessment
+Plan scored low (0/100) with 0 critical or high-risk changes. Changes to databases, networking, DNS, or IAM can cause cascading outages. Verify dependencies, ensure rollback plans are in place, and apply during a maintenance window if critical resources are affected.
+
+### Actionable Recommendations
+- [ ] Review all changes before applying
+- [ ] Ensure recent state backup exists
+- [ ] Verify dependent resources are healthy
+
+### Rollback Strategy
+1. terraform state pull > backup.tfstate (save current state)
+2. terraform destroy -target=<failed resource> (revert specific resource)
+3. terraform apply -var-file=previous.tfvars (re-apply last known good config)
+4. For stateful resources: restore from most recent backup/snapshot (RDS snapshot, EBS snapshot, S3 versioning)
+
+### Next Steps
+1. Review changes above to confirm they match expectations
+2. Apply at your convenience; risk is moderate or low
+
+
+### Risk Breakdown
+
+| Tier | Count |
+|------|-------|
+| critical | 0 |
+| high | 0 |
+| medium | 0 |
+| low | 0 |
