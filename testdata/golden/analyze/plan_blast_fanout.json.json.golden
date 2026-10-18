@@ -245,7 +245,7 @@
     "risk_score": "100/100",
     "risk_level": "CRITICAL",
     "resource_change_summary": "11 update, 3 delete",
-    "blast_radius_summary": "14 dependent resources may be affected across all changes. Largest blast: aws_db_instance.primary (9 downstream resources)",
+    "blast_radius_summary": "11 dependent resources may be affected across all changes. Largest blast: aws_db_instance.primary (9 downstream resources)",
     "critical_findings": [
       "[CRITICAL] aws_db_instance.primary → DELETE: Blast radius of 9 dependent resources (incl. aws_lambda_function.direct0, aws_lambda_function.direct1, aws_lambda_function.direct2, aws_lambda_function.direct3, aws_lambda_function.direct4 and 4 more)",
       "[CRITICAL] aws_db_instance.alpha → DELETE: Blast radius of 1 dependent resources (incl. aws_lambda_function.alpha_dependent)",
