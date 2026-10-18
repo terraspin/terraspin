@@ -76,6 +76,19 @@ func TestCLIOutputStable(t *testing.T) {
 			})
 		}
 	}
+	for _, pair := range [][2]string{{"plan_with_sensitive_collections_a.json", "plan_with_sensitive_collections_b.json"}, {"plan.json", "plan_with_modules.json"}, {"plan_blast_fanout.json", "plan.json"}} {
+		for _, format := range []string{"text", "json", "markdown"} {
+			t.Run("diff/"+pair[0]+"-"+pair[1]+"/"+format, func(t *testing.T) {
+				outputs := map[string]struct{}{}
+				for range 50 {
+					outputs[string(runGoldenCLI(t, binary, "diff", "--no-ai", "--format", format, filepath.Join(repoRoot, "testdata", pair[0]), filepath.Join(repoRoot, "testdata", pair[1])))] = struct{}{}
+				}
+				if len(outputs) != 1 {
+					t.Fatalf("unique outputs = %d, want 1", len(outputs))
+				}
+			})
+		}
+	}
 }
 
 func runGoldenCLI(t *testing.T, binary string, args ...string) []byte {
