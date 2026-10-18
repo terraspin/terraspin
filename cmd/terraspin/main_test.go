@@ -514,3 +514,25 @@ func TestCLIExplicitLLMUsesAPIKeyEnvironment(t *testing.T) {
 		t.Errorf("x-api-key = %q, want test API key", got)
 	}
 }
+
+func TestBuildRuleNarrativeCountsUniqueAffectedResources(t *testing.T) {
+	dep := func(a string, h int) analyzer.DependentResource {
+		return analyzer.DependentResource{Address: a, Hops: h}
+	}
+	blast := map[string]*analyzer.BlastRadius{"db.primary": {DirectDeps: []analyzer.DependentResource{dep("fn.a", 1), dep("fn.b", 1)}, TransitiveDeps: []analyzer.DependentResource{dep("fn.c", 2)}, TotalAffected: 3}, "fn.a": {DirectDeps: []analyzer.DependentResource{dep("fn.c", 1)}, TotalAffected: 1}}
+	got := buildRuleNarrative(&parser.PlanAST{}, &analyzer.PlanScore{Overall: analyzer.RiskScore{Tier: analyzer.TierLow}}, blast).BlastRadiusSummary
+	want := "3 dependent resources may be affected across all changes. Largest blast: db.primary (3 downstream resources)"
+	if got != want {
+		t.Fatalf("got %q want %q", got, want)
+	}
+}
+func TestBuildRuleNarrativeLargestBlastTieBreakIsStable(t *testing.T) {
+	d := func(a string) analyzer.DependentResource { return analyzer.DependentResource{Address: a, Hops: 1} }
+	blast := map[string]*analyzer.BlastRadius{"b": {DirectDeps: []analyzer.DependentResource{d("d1"), d("d2")}, TotalAffected: 2}, "a": {DirectDeps: []analyzer.DependentResource{d("d3"), d("d4")}, TotalAffected: 2}}
+	for range 100 {
+		got := buildRuleNarrative(&parser.PlanAST{}, &analyzer.PlanScore{Overall: analyzer.RiskScore{Tier: analyzer.TierLow}}, blast).BlastRadiusSummary
+		if !strings.Contains(got, "Largest blast: a (2 downstream resources)") {
+			t.Fatal(got)
+		}
+	}
+}
