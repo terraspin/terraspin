@@ -228,10 +228,16 @@ func buildRuleNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast ma
 			criticalChanges = append(criticalChanges, desc)
 			if br, ok := blast[rs.Address]; ok && br.TotalAffected > 0 {
 				finding := fmt.Sprintf("[%s] %s → %s: Blast radius of %d dependent resources", strings.ToUpper(string(rs.Tier)), rs.Address, strings.ToUpper(string(rs.Action)), br.TotalAffected)
-				for _, d := range br.DirectDeps {
-					finding += fmt.Sprintf(" (incl. %s", d.Address)
-				}
 				if len(br.DirectDeps) > 0 {
+					limit := min(len(br.DirectDeps), 5)
+					names := make([]string, limit)
+					for i, d := range br.DirectDeps[:limit] {
+						names[i] = d.Address
+					}
+					finding += " (incl. " + strings.Join(names, ", ")
+					if more := br.TotalAffected - limit; more > 0 {
+						finding += fmt.Sprintf(" and %d more", more)
+					}
 					finding += ")"
 				}
 				criticalFindings = append(criticalFindings, finding)

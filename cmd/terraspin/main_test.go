@@ -2,6 +2,7 @@ package main
 
 import (
 	"encoding/json"
+	"fmt"
 	"io"
 	"net/http"
 	"net/http/httptest"
@@ -16,6 +17,36 @@ import (
 	"github.com/terraspin/terraspin/internal/config"
 	"github.com/terraspin/terraspin/internal/parser"
 )
+
+func TestBuildRuleNarrativeFormatsIncludedDependents(t *testing.T) {
+	for _, count := range []int{1, 2, 5, 6, 20} {
+		t.Run(fmt.Sprintf("%d", count), func(t *testing.T) {
+			deps := make([]analyzer.DependentResource, count)
+			for i := range deps {
+				deps[i] = analyzer.DependentResource{Address: fmt.Sprintf("dep-%02d", i)}
+			}
+			ast := &parser.PlanAST{Changes: []parser.ResourceChange{{Address: "root", Action: parser.ActionDelete}}}
+			score := &analyzer.PlanScore{Overall: analyzer.RiskScore{Tier: analyzer.TierCritical}, Counts: map[analyzer.RiskTier]int{analyzer.TierCritical: 1}, ResourceScores: []analyzer.ResourceRiskScore{{Address: "root", Action: parser.ActionDelete, Tier: analyzer.TierCritical}}}
+			narr := buildRuleNarrative(ast, score, map[string]*analyzer.BlastRadius{"root": {RootAddress: "root", DirectDeps: deps, TotalAffected: count}})
+			got := narr.CriticalFindings[0]
+			if strings.Count(got, "(") != strings.Count(got, ")") {
+				t.Fatalf("unbalanced: %s", got)
+			}
+			if count <= 5 && !strings.Contains(got, "(incl. "+strings.Join(func() []string {
+				names := make([]string, count)
+				for i := range names {
+					names[i] = fmt.Sprintf("dep-%02d", i)
+				}
+				return names
+			}(), ", ")+")") {
+				t.Fatalf("got %s", got)
+			}
+			if count > 5 && !strings.Contains(got, "dep-04 and "+fmt.Sprint(count-5)+" more)") {
+				t.Fatalf("got %s", got)
+			}
+		})
+	}
+}
 
 func TestBuildLLMNarrativeFallsBackWhenLLMDisabled(t *testing.T) {
 	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
