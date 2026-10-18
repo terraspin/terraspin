@@ -28,6 +28,8 @@ This is a code-derived model of Terraspin v0.2.x, not a guarantee. **[VERIFIED]*
 
 **[VERIFIED]** A CI job that runs untrusted PR code can consume a PR-controlled `.terraspin.yml`. Treat its provider selection, LLM behavior, custom rules, and Slack settings as untrusted configuration; restrict credentials and do not run it with secrets unless that exposure is intended.
 
+**[NOT VERIFIED]** The precedence of `--fail-on` over `risk.fail_on` in `.terraspin.yml` has not been measured. In CI, pass `--fail-on` explicitly and load configuration from the base branch.
+
 ## Keys, Retries, and Limits
 
 - **[VERIFIED]** `internal/ai.Execute` rejects empty Claude and OpenAI keys before a request; a gateway without authentication still needs a non-secret placeholder. `TestExecuteGatewayStillRequiresClaudeKey` covers that path. `TestExecuteAllowsOllamaWithoutKey` covers Ollama without a key. Keys are read from environment variables and passed in provider headers; the reviewed code does not write them to output.
@@ -36,7 +38,11 @@ This is a code-derived model of Terraspin v0.2.x, not a guarantee. **[VERIFIED]*
 
 ## MCP Server
 
-- **[VERIFIED]** `cmd/terraspin.serveCmd` defaults to stdio, which opens no Terraspin TCP listener. Its SSE transport binds the configured `--host` and `--port` (defaults `localhost:8080`); a manual run bound `127.0.0.1:18480` and `ss` reported the listener. The server exposes no authentication option or authentication middleware in the reviewed code.
+- **[VERIFIED]** `cmd/terraspin.serveCmd` defaults to stdio, which opens no Terraspin TCP listener. Its SSE transport binds the configured `--host` and `--port` (defaults `localhost:8080`); the server exposes no authentication option or authentication middleware in the reviewed code.
+- **[VERIFIED]** Terraspin pins `github.com/mark3labs/mcp-go` v0.58.0 in `go.mod` and constructs its SSE server with `NewSSEServer(s)` without `WithSSEDisableLocalhostProtection` or `WithSSECORS`. In that version, `SSEServer.ServeHTTP` calls `rejectDNSRebinding`: a loopback request with `Host: evil.example` received `403 Forbidden` in this measurement. The source shows that disabling this protection is opt-in.
+- **[VERIFIED]** On a server bound to `127.0.0.1`, `GET /sse` returned `200 OK`, `Access-Control-Allow-Origin: *`, and an `endpoint` event containing a `sessionId`. The same request with `Origin: http://evil.example` also returned `200 OK` and `Access-Control-Allow-Origin: *`. This matches v0.58.0 `handleSSE`, which sets that header when explicit `WithSSECORS` configuration is absent; the measurement found no Origin-header rejection.
+- **[VERIFIED]** A `POST` of JSON-RPC `initialize` to the measured endpoint with `Content-Type: text/plain` and `Origin: http://evil.example` returned `202 Accepted`; the connected SSE stream received the JSON-RPC result. v0.58.0 `handleMessage` requires the `sessionId` query parameter and decodes the request body as JSON. These are direct HTTP results, not a claim that a browser can exploit them: browser Private/Local Network Access protections can affect browser behavior.
+- **[RECOMMENDATION]** Prefer stdio. Do not run the SSE transport while visiting untrusted sites. Origin rejection and a request-body size limit remain follow-up work.
 - **[VERIFIED]** `mcp.NewServer` exposes `analyze_plan` (`plan_json`), `get_blast_radius` (`plan_json`, `resource_address`), `explain_change` (`plan_json`, `resource_address`), `get_risk_summary` (`plan_json`), and `suggest_rollback` (`plan_json`, optional `failure_point`). All accept raw plan JSON as a string and return text content containing risk summaries, resource addresses, blast data, explanations, or rollback guidance.
 - **[VERIFIED]** `mcp.planFromArgs` redacts resource changes before handlers format them. `TestHandleExplainChange_redactsSensitiveLists` covers marked sensitive values. The same manual Terraform fixture returned no synthetic variable/output value from all five MCP tools.
 - **[NOT VERIFIED]** There is no repository-level input-size limit in `mcp.planFromArgs`; upstream transport limits were not evaluated. `explain_change` can return unmarked changed resource attribute values, just as local diff output can.
