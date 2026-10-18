@@ -1,0 +1,396 @@
+{
+  "format_version": "1.2",
+  "terraform_version": "1.8.0",
+  "resource_changes": [
+    {
+      "address": "aws_db_instance.primary",
+      "mode": "managed",
+      "type": "aws_db_instance",
+      "name": "primary",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "delete"
+        ],
+        "before": {
+          "x": 1
+        },
+        "after": null,
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_db_instance.alpha",
+      "mode": "managed",
+      "type": "aws_db_instance",
+      "name": "alpha",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "delete"
+        ],
+        "before": {
+          "x": 1
+        },
+        "after": null,
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_db_instance.beta",
+      "mode": "managed",
+      "type": "aws_db_instance",
+      "name": "beta",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "delete"
+        ],
+        "before": {
+          "x": 1
+        },
+        "after": null,
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_lambda_function.direct0",
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "direct0",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "x": 1
+        },
+        "after": {
+          "x": 2
+        },
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_lambda_function.direct1",
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "direct1",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "x": 1
+        },
+        "after": {
+          "x": 2
+        },
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_lambda_function.direct2",
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "direct2",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "x": 1
+        },
+        "after": {
+          "x": 2
+        },
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_lambda_function.direct3",
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "direct3",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "x": 1
+        },
+        "after": {
+          "x": 2
+        },
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_lambda_function.direct4",
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "direct4",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "x": 1
+        },
+        "after": {
+          "x": 2
+        },
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_lambda_function.direct5",
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "direct5",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "x": 1
+        },
+        "after": {
+          "x": 2
+        },
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_lambda_function.transitive0",
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "transitive0",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "x": 1
+        },
+        "after": {
+          "x": 2
+        },
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_lambda_function.transitive1",
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "transitive1",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "x": 1
+        },
+        "after": {
+          "x": 2
+        },
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_lambda_function.transitive2",
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "transitive2",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "x": 1
+        },
+        "after": {
+          "x": 2
+        },
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_lambda_function.alpha_dependent",
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "alpha_dependent",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "x": 1
+        },
+        "after": {
+          "x": 2
+        },
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    },
+    {
+      "address": "aws_lambda_function.beta_dependent",
+      "mode": "managed",
+      "type": "aws_lambda_function",
+      "name": "beta_dependent",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "change": {
+        "actions": [
+          "update"
+        ],
+        "before": {
+          "x": 1
+        },
+        "after": {
+          "x": 2
+        },
+        "before_sensitive": {},
+        "after_sensitive": {}
+      }
+    }
+  ],
+  "configuration": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_lambda_function.direct0",
+          "expressions": {
+            "db": {
+              "references": [
+                "aws_db_instance.primary.id"
+              ]
+            }
+          }
+        },
+        {
+          "address": "aws_lambda_function.direct1",
+          "expressions": {
+            "db": {
+              "references": [
+                "aws_db_instance.primary.id"
+              ]
+            }
+          }
+        },
+        {
+          "address": "aws_lambda_function.direct2",
+          "expressions": {
+            "db": {
+              "references": [
+                "aws_db_instance.primary.id"
+              ]
+            }
+          }
+        },
+        {
+          "address": "aws_lambda_function.direct3",
+          "expressions": {
+            "db": {
+              "references": [
+                "aws_db_instance.primary.id"
+              ]
+            }
+          }
+        },
+        {
+          "address": "aws_lambda_function.direct4",
+          "expressions": {
+            "db": {
+              "references": [
+                "aws_db_instance.primary.id"
+              ]
+            }
+          }
+        },
+        {
+          "address": "aws_lambda_function.direct5",
+          "expressions": {
+            "db": {
+              "references": [
+                "aws_db_instance.primary.id"
+              ]
+            }
+          }
+        },
+        {
+          "address": "aws_lambda_function.transitive0",
+          "expressions": {
+            "dep": {
+              "references": [
+                "aws_lambda_function.direct0.id"
+              ]
+            }
+          }
+        },
+        {
+          "address": "aws_lambda_function.transitive1",
+          "expressions": {
+            "dep": {
+              "references": [
+                "aws_lambda_function.direct1.id"
+              ]
+            }
+          }
+        },
+        {
+          "address": "aws_lambda_function.transitive2",
+          "expressions": {
+            "dep": {
+              "references": [
+                "aws_lambda_function.direct2.id"
+              ]
+            }
+          }
+        },
+        {
+          "address": "aws_lambda_function.alpha_dependent",
+          "expressions": {
+            "db": {
+              "references": [
+                "aws_db_instance.alpha.id"
+              ]
+            }
+          }
+        },
+        {
+          "address": "aws_lambda_function.beta_dependent",
+          "expressions": {
+            "db": {
+              "references": [
+                "aws_db_instance.beta.id"
+              ]
+            }
+          }
+        }
+      ]
+    }
+  }
+}

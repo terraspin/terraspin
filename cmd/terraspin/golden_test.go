@@ -48,6 +48,36 @@ func TestCLIGolden(t *testing.T) {
 	}
 }
 
+func TestCLIOutputStable(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(t.TempDir(), "terraspin")
+	build := exec.Command("go", "build", "-o", binary, ".")
+	build.Dir = filepath.Join(repoRoot, "cmd", "terraspin")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build CLI: %v\n%s", err, output)
+	}
+	fixtures, err := filepath.Glob(filepath.Join(repoRoot, "testdata", "*.json"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, fixture := range fixtures {
+		for _, format := range []string{"text", "json", "markdown"} {
+			t.Run(filepath.Base(fixture)+"/"+format, func(t *testing.T) {
+				outputs := map[string]struct{}{}
+				for range 50 {
+					outputs[string(runGoldenCLI(t, binary, "--no-ai", "--format", format, fixture))] = struct{}{}
+				}
+				if len(outputs) != 1 {
+					t.Fatalf("unique outputs = %d, want 1", len(outputs))
+				}
+			})
+		}
+	}
+}
+
 func runGoldenCLI(t *testing.T, binary string, args ...string) []byte {
 	t.Helper()
 	cmd := exec.Command(binary, args...)
