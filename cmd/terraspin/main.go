@@ -283,18 +283,24 @@ func buildRuleNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast ma
 	}
 
 	// Blast radius summary
-	totalBlast := 0
+	affected := map[string]struct{}{}
 	maxBlastAddr := ""
 	maxBlast := 0
 	for addr, br := range blast {
 		if br.TotalAffected > 0 {
-			totalBlast += br.TotalAffected
+			for _, d := range br.DirectDeps {
+				affected[d.Address] = struct{}{}
+			}
+			for _, d := range br.TransitiveDeps {
+				affected[d.Address] = struct{}{}
+			}
 			if br.TotalAffected > maxBlast || (br.TotalAffected == maxBlast && (maxBlastAddr == "" || addr < maxBlastAddr)) {
 				maxBlast = br.TotalAffected
 				maxBlastAddr = addr
 			}
 		}
 	}
+	totalBlast := len(affected)
 	blastSummary := "No cascading dependencies detected"
 	if totalBlast > 0 {
 		blastSummary = fmt.Sprintf("%d dependent resources may be affected across all changes", totalBlast)
