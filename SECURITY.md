@@ -9,7 +9,7 @@ Only the latest release receives security fixes.
 | The latest release | Yes |
 | Earlier releases | No |
 
-v0.1.0 has a sensitive-value handling issue that is corrected in the next release.
+v0.1.0 prints values that Terraform marks as sensitive in `terraspin diff` output; this is fixed in v0.2.0.
 
 ## Reporting a Vulnerability
 
