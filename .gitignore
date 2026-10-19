@@ -30,6 +30,11 @@ result-*
 .envrc
 .direnv/
 
+# Local secrets
+.env
+.env.*
+!.env.example
+
 # Terraspin
 graphify-out/
 *.tfplan
