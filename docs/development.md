@@ -83,3 +83,13 @@ No framework, no ORM, no DI container. Stdlib HTTP for all API clients.
 - Config file validation happens at `Load()` time — invalid configs fail fast
 - LLM timeout, retries, model selection, and fallback behavior are configured by the `llm` block; analyze and diff share the provider execution path
 - Sensitive values are redacted before any external API call
+
+## Adding an LLM provider
+
+Implement `Provider` (`Name`, `NeedsKey`, `KeyEnv`, and `Query`) in one file under `internal/ai`.
+Register it from `init`; `Lookup` resolves names and `Names` supplies sorted diagnostics.
+Use `Request.Extra` only for provider-specific input such as `ollama_host` or a future region.
+Keep request bytes, headers, defaults, response parsing, and errors compatible with the provider it replaces.
+Extend `provider_contract_test.go` to exercise the registered provider through `Lookup`.
+
+Release note draft: Internal: LLM providers are now registered through a Provider interface; no user-facing change.
