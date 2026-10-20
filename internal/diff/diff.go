@@ -8,6 +8,7 @@ import (
 
 	"github.com/terraspin/terraspin/internal/ai"
 	"github.com/terraspin/terraspin/internal/parser"
+	"github.com/terraspin/terraspin/internal/safetext"
 )
 
 // Compare parses two plan JSON byte slices and returns a structured
@@ -311,7 +312,7 @@ func BuildDiffPrompt(result *DiffResult) string {
 		if d.Status == StatusUnchanged {
 			continue
 		}
-		fmt.Fprintf(&b, "- %s [%s] %s", d.Address, d.Type, string(d.Status))
+		fmt.Fprintf(&b, "- %s [%s] %s", safetext.SafeAddress(d.Address), safetext.SafeSegment(d.Type), safetext.SafeSegment(string(d.Status)))
 		if len(d.Changes) > 0 {
 			fmt.Fprintf(&b, " (%d attributes changed)", len(d.Changes))
 		}

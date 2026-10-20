@@ -4,6 +4,9 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"unicode"
+
+	"github.com/terraspin/terraspin/internal/safetext"
 )
 
 // Narrative holds the analysis briefing.
@@ -48,7 +51,7 @@ func BuildAnalysisPrompt(changes []PlanChangeSummary, riskTier string, riskScore
 		counts["critical"], counts["high"], counts["medium"], counts["low"]))
 	b.WriteString("Changed resources:\n")
 	for _, c := range changes {
-		b.WriteString(fmt.Sprintf("- %s [%s] → %s", c.Address, c.Tier, strings.ToUpper(string(c.Action))))
+		b.WriteString(fmt.Sprintf("- %s [%s] → %s", safetext.SafeAddress(c.Address), safetext.SafeSegment(c.Tier), strings.ToUpper(safetext.SafeSegment(c.Action))))
 		if c.BlastDesc != "" {
 			b.WriteString(fmt.Sprintf(" | blast: %s", c.BlastDesc))
 		}
@@ -139,6 +142,69 @@ func extractJSON(text string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// SanitizeNarrative bounds LLM-controlled narrative text before it reaches output.
+func SanitizeNarrative(n *Narrative) *Narrative {
+	if n == nil {
+		return nil
+	}
+
+	remaining := 6000
+	n.Provider = boundedNarrativeString(n.Provider, 1500, &remaining)
+	n.Summary = boundedNarrativeString(n.Summary, 1500, &remaining)
+	n.Recommendations = boundedNarrativeList(n.Recommendations, &remaining)
+	n.CriticalChanges = boundedNarrativeList(n.CriticalChanges, &remaining)
+	n.CriticalFindings = boundedNarrativeList(n.CriticalFindings, &remaining)
+	n.NextSteps = boundedNarrativeList(n.NextSteps, &remaining)
+	n.InfraSummary = boundedNarrativeString(n.InfraSummary, 1500, &remaining)
+	n.RiskScore = boundedNarrativeString(n.RiskScore, 1500, &remaining)
+	n.RiskLevel = boundedNarrativeString(n.RiskLevel, 1500, &remaining)
+	n.ResourceChangeSummary = boundedNarrativeString(n.ResourceChangeSummary, 1500, &remaining)
+	n.BlastRadiusSummary = boundedNarrativeString(n.BlastRadiusSummary, 1500, &remaining)
+	n.RiskAssessment = boundedNarrativeString(n.RiskAssessment, 1500, &remaining)
+	n.RollbackStrategy = boundedNarrativeString(n.RollbackStrategy, 1500, &remaining)
+	if len(n.AffectedByTier) > 10 {
+		n.AffectedByTier = n.AffectedByTier[:10]
+	}
+	for i := range n.AffectedByTier {
+		n.AffectedByTier[i].Tier = boundedNarrativeString(n.AffectedByTier[i].Tier, 1500, &remaining)
+		n.AffectedByTier[i].Resources = boundedNarrativeList(n.AffectedByTier[i].Resources, &remaining)
+	}
+	return n
+}
+
+func boundedNarrativeList(values []string, remaining *int) []string {
+	if len(values) > 10 {
+		values = values[:10]
+	}
+	for i := range values {
+		values[i] = boundedNarrativeString(values[i], 400, remaining)
+	}
+	return values
+}
+
+func boundedNarrativeString(value string, maximum int, remaining *int) string {
+	value = strings.Map(func(r rune) rune {
+		if unicode.IsControl(r) && r != '\n' && r != '\t' {
+			return -1
+		}
+		return r
+	}, value)
+	runes := []rune(value)
+	limit := min(maximum, *remaining)
+	if len(runes) <= limit {
+		*remaining -= len(runes)
+		return value
+	}
+	if limit == 0 {
+		return ""
+	}
+	*remaining -= limit
+	if limit == 1 {
+		return "…"
+	}
+	return string(runes[:limit-1]) + "…"
 }
 
 // ParseNarrativeFromLLM tries to parse the LLM response as JSON narrative.

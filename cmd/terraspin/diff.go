@@ -152,7 +152,7 @@ func diffAI(result *diff.DiffResult, cfg *config.LLMConfig, provider, flagModel,
 	if err != nil {
 		return nil, err
 	}
-	return ai.ParseNarrativeFromLLM(text), nil
+	return ai.SanitizeNarrative(ai.ParseNarrativeFromLLM(text)), nil
 }
 
 func printDiffJSON(result *diff.DiffResult, narr *ai.Narrative) {

@@ -58,16 +58,3 @@ func Names() []string {
 func unknownProviderError(name string) error {
 	return fmt.Errorf("unknown LLM provider: %s (registered: %s)", name, strings.Join(Names(), ", "))
 }
-
-// QueryLLM routes to a registered provider and returns its text and tokens.
-func QueryLLM(ctx context.Context, provider, apiKey, model, host, prompt string) (string, int, error) {
-	registered, ok := Lookup(provider)
-	if !ok {
-		return "", 0, unknownProviderError(provider)
-	}
-	response, err := registered.Query(ctx, Request{
-		Model: model, System: SystemPrompt, Prompt: prompt, APIKey: apiKey,
-		Extra: map[string]string{"ollama_host": host},
-	})
-	return response.Text, response.Tokens, err
-}
