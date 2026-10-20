@@ -1,165 +1,10 @@
 package ai
 
 import (
-	"bytes"
-	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"strings"
 )
-
-// ---------------------------------------------------------------------------
-// OpenAI provider
-// ---------------------------------------------------------------------------
-
-var openAIAPI = "https://api.openai.com/v1/chat/completions"
-
-type openAIRequest struct {
-	Model     string          `json:"model"`
-	MaxTokens int             `json:"max_tokens"`
-	Messages  []openAIMessage `json:"messages"`
-}
-
-type openAIMessage struct {
-	Role    string `json:"role"`
-	Content string `json:"content"`
-}
-
-type openAIResponse struct {
-	Choices []struct {
-		Message struct {
-			Content string `json:"content"`
-		} `json:"message"`
-	} `json:"choices"`
-	Usage *struct {
-		TotalTokens int `json:"total_tokens"`
-	} `json:"usage,omitempty"`
-}
-
-// QueryOpenAI sends a prompt to the OpenAI Chat Completions API.
-func QueryOpenAI(ctx context.Context, apiKey, model, prompt string) (string, int, error) {
-	if model == "" {
-		model = "gpt-4o"
-	}
-	body := openAIRequest{
-		Model:     model,
-		MaxTokens: 2048,
-		Messages: []openAIMessage{
-			{Role: "system", Content: SystemPrompt},
-			{Role: "user", Content: prompt},
-		},
-	}
-	raw, _ := json.Marshal(body)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, openAIAPI, bytes.NewReader(raw))
-	if err != nil {
-		return "", 0, fmt.Errorf("openai: create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Authorization", "Bearer "+apiKey)
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", 0, fmt.Errorf("openai: send request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respRaw, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		return "", 0, &HTTPError{Provider: "openai", StatusCode: resp.StatusCode, Message: string(respRaw), RetryAfter: parseRetryAfter(resp.Header.Get("Retry-After"))}
-	}
-
-	var cresp openAIResponse
-	if err := json.Unmarshal(respRaw, &cresp); err != nil {
-		return "", 0, fmt.Errorf("openai: parse response: %w", err)
-	}
-	if len(cresp.Choices) == 0 {
-		return "", 0, fmt.Errorf("openai: no choices in response")
-	}
-	tokens := 0
-	if cresp.Usage != nil {
-		tokens = cresp.Usage.TotalTokens
-	}
-	return cresp.Choices[0].Message.Content, tokens, nil
-}
-
-// ---------------------------------------------------------------------------
-// Ollama provider
-// ---------------------------------------------------------------------------
-
-type ollamaRequest struct {
-	Model  string `json:"model"`
-	Prompt string `json:"prompt"`
-	Stream bool   `json:"stream"`
-}
-
-type ollamaResponse struct {
-	Response string `json:"response"`
-	Tokens   int    `json:"eval_count"`
-}
-
-// QueryOllama sends a prompt to a local Ollama instance.
-func QueryOllama(ctx context.Context, host, model, prompt string) (string, int, error) {
-	if host == "" {
-		host = "http://localhost:11434"
-	}
-	if model == "" {
-		model = "llama3.2"
-	}
-	body := ollamaRequest{
-		Model:  model,
-		Prompt: prompt,
-		Stream: false,
-	}
-	raw, _ := json.Marshal(body)
-
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, strings.TrimRight(host, "/")+"/api/generate", bytes.NewReader(raw))
-	if err != nil {
-		return "", 0, fmt.Errorf("ollama: create request: %w", err)
-	}
-	req.Header.Set("Content-Type", "application/json")
-
-	resp, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return "", 0, fmt.Errorf("ollama: send request: %w", err)
-	}
-	defer resp.Body.Close()
-
-	respRaw, _ := io.ReadAll(resp.Body)
-	if resp.StatusCode != http.StatusOK {
-		return "", 0, &HTTPError{Provider: "ollama", StatusCode: resp.StatusCode, Message: string(respRaw), RetryAfter: parseRetryAfter(resp.Header.Get("Retry-After"))}
-	}
-
-	var oresp ollamaResponse
-	if err := json.Unmarshal(respRaw, &oresp); err != nil {
-		return "", 0, fmt.Errorf("ollama: parse response: %w", err)
-	}
-	return oresp.Response, oresp.Tokens, nil
-}
-
-// ---------------------------------------------------------------------------
-// Provider router
-// ---------------------------------------------------------------------------
-
-// QueryLLM routes to the right provider and returns the text response.
-func QueryLLM(ctx context.Context, provider, apiKey, model, host, prompt string) (string, int, error) {
-	switch provider {
-	case "claude":
-		return QueryClaude(ctx, apiKey, model, prompt)
-	case "openai":
-		return QueryOpenAI(ctx, apiKey, model, prompt)
-	case "ollama":
-		return QueryOllama(ctx, host, model, prompt)
-	default:
-		return "", 0, fmt.Errorf("unknown LLM provider: %s (use claude|openai|ollama)", provider)
-	}
-}
-
-// ---------------------------------------------------------------------------
-// Narrative types
-// ---------------------------------------------------------------------------
 
 // Narrative holds the analysis briefing.
 type Narrative struct {
@@ -184,10 +29,6 @@ type TierGroup struct {
 	Tier      string   `json:"tier"`
 	Resources []string `json:"resources"`
 }
-
-// ---------------------------------------------------------------------------
-// Prompt builder
-// ---------------------------------------------------------------------------
 
 // PlanChangeSummary is a compact representation of one resource for LLM prompts.
 type PlanChangeSummary struct {
@@ -280,13 +121,11 @@ func stripMarkdownFences(text string) string {
 func extractJSON(text string) (string, bool) {
 	t := stripMarkdownFences(text)
 
-	// Find first '{'
 	start := strings.IndexByte(t, '{')
 	if start < 0 {
 		return "", false
 	}
 
-	// Match braces
 	depth := 0
 	for i := start; i < len(t); i++ {
 		switch t[i] {
@@ -308,7 +147,6 @@ func extractJSON(text string) (string, bool) {
 func ParseNarrativeFromLLM(text string) *Narrative {
 	n := &Narrative{Provider: "llm"}
 
-	// Try extracting clean JSON from the raw text first.
 	if cleaned, ok := extractJSON(text); ok {
 		if err := json.Unmarshal([]byte(cleaned), n); err == nil && n.Summary != "" {
 			return n

@@ -136,9 +136,9 @@ Flags:
 
 // diffAI sends the diff to the LLM for analysis.
 func diffAI(result *diff.DiffResult, cfg *config.LLMConfig, provider, flagModel, ollamaHost string) (*ai.Narrative, error) {
-	apiKey := os.Getenv("ANTHROPIC_API_KEY")
-	if provider == "openai" {
-		apiKey = os.Getenv("OPENAI_API_KEY")
+	apiKey := ""
+	if registered, ok := ai.Lookup(provider); ok {
+		apiKey = os.Getenv(registered.KeyEnv())
 	}
 	model := flagModel
 	if model == "" {
@@ -146,7 +146,7 @@ func diffAI(result *diff.DiffResult, cfg *config.LLMConfig, provider, flagModel,
 	}
 	timeout, _ := time.ParseDuration(cfg.Timeout)
 	text, _, err := ai.Execute(context.Background(), ai.LLMOptions{
-		Provider: provider, APIKey: apiKey, Model: model, OllamaHost: ollamaHost,
+		Provider: provider, APIKey: apiKey, Model: model, Extra: map[string]string{"ollama_host": ollamaHost},
 		Timeout: timeout, MaxRetries: cfg.MaxRetries,
 	}, diff.BuildDiffPrompt(result))
 	if err != nil {
