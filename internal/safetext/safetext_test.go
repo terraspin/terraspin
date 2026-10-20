@@ -24,6 +24,8 @@ func TestSafeAddress(t *testing.T) {
 		{"too long", strings.Repeat("a", 257), "<invalid-address>"},
 		{"space key", `aws_s3_bucket.logs["prod logs"]`, `aws_s3_bucket.logs["<redacted-key>"]`},
 		{"quote key", `aws_s3_bucket.logs["prod\"logs"]`, `aws_s3_bucket.logs["<redacted-key>"]`},
+		{"single segment", "aws_instance", "<invalid-address>"},
+		{"module only", "module.vpc", "<invalid-address>"},
 		{"empty", "", "<invalid-address>"},
 	}
 

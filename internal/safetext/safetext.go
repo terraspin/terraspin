@@ -13,6 +13,7 @@ func SafeAddress(addr string) string {
 	}
 
 	var out strings.Builder
+	var segments []string
 	for pos := 0; pos < len(addr); {
 		end := pos
 		for end < len(addr) && isIdentifierChar(addr[end], end == pos) {
@@ -21,7 +22,9 @@ func SafeAddress(addr string) string {
 		if end == pos {
 			return invalidAddress
 		}
-		out.WriteString(addr[pos:end])
+		segment := addr[pos:end]
+		segments = append(segments, segment)
+		out.WriteString(segment)
 		pos = end
 
 		if pos < len(addr) && addr[pos] == '[' {
@@ -33,7 +36,7 @@ func SafeAddress(addr string) string {
 			pos += end
 		}
 		if pos == len(addr) {
-			return out.String()
+			return validTerraformAddress(out.String(), segments)
 		}
 		if addr[pos] != '.' {
 			return invalidAddress
@@ -42,6 +45,20 @@ func SafeAddress(addr string) string {
 		pos++
 	}
 	return invalidAddress
+}
+
+func validTerraformAddress(address string, segments []string) string {
+	resourceStart := 0
+	for resourceStart < len(segments) && segments[resourceStart] == "module" {
+		if resourceStart+1 >= len(segments) {
+			return invalidAddress
+		}
+		resourceStart += 2
+	}
+	if len(segments)-resourceStart != 2 {
+		return invalidAddress
+	}
+	return address
 }
 
 // SafeSegment validates Terraform resource types and statuses used in prompts.
