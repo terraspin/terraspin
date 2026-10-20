@@ -16,7 +16,7 @@ type LLMOptions struct {
 	Provider   string
 	APIKey     string
 	Model      string
-	OllamaHost string
+	Extra      map[string]string
 	Timeout    time.Duration
 	MaxRetries int
 }
@@ -59,19 +59,21 @@ func Execute(ctx context.Context, options LLMOptions, prompt string) (string, in
 	if options.MaxRetries < 0 {
 		options.MaxRetries = 0
 	}
-	if options.Provider == "claude" || options.Provider == "openai" {
-		if options.APIKey == "" {
-			return "", 0, fmt.Errorf("%s: missing required %s; a gateway/proxy without authentication can use a placeholder value", options.Provider, apiKeyEnv(options.Provider))
-		}
+	provider, ok := Lookup(options.Provider)
+	if !ok {
+		return "", 0, unknownProviderError(options.Provider)
+	}
+	if provider.NeedsKey() && options.APIKey == "" {
+		return "", 0, fmt.Errorf("%s: missing required %s; a gateway/proxy without authentication can use a placeholder value", options.Provider, provider.KeyEnv())
 	}
 
 	var lastErr error
 	for attempt := 0; attempt <= options.MaxRetries; attempt++ {
 		attemptCtx, cancel := context.WithTimeout(ctx, options.Timeout)
-		text, tokens, err := QueryLLM(attemptCtx, options.Provider, options.APIKey, options.Model, options.OllamaHost, prompt)
+		response, err := provider.Query(attemptCtx, Request{Model: options.Model, System: SystemPrompt, Prompt: prompt, APIKey: options.APIKey, Extra: options.Extra})
 		if err == nil {
 			cancel()
-			return text, tokens, nil
+			return response.Text, response.Tokens, nil
 		}
 		lastErr = err
 		retry := attempt < options.MaxRetries && isRetryable(err)
@@ -97,13 +99,6 @@ func parseRetryAfter(value string) time.Duration {
 }
 
 var httpDate = func(value string) (time.Time, error) { return time.Parse(time.RFC1123, value) }
-
-func apiKeyEnv(provider string) string {
-	if provider == "openai" {
-		return "OPENAI_API_KEY"
-	}
-	return "ANTHROPIC_API_KEY"
-}
 
 func isRetryable(err error) bool {
 	var httpErr *HTTPError

@@ -372,9 +372,9 @@ func buildLLMNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast map
 		changes = append(changes, s)
 	}
 
-	apiKey := os.Getenv("ANTHROPIC_API_KEY")
-	if provider == "openai" {
-		apiKey = os.Getenv("OPENAI_API_KEY")
+	apiKey := ""
+	if registered, ok := ai.Lookup(provider); ok {
+		apiKey = os.Getenv(registered.KeyEnv())
 	}
 	model := llmModel
 	if model == "" {
@@ -390,7 +390,7 @@ func buildLLMNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast map
 	prompt := ai.BuildAnalysisPrompt(changes, string(score.Overall.Tier), score.Overall.Score, counts)
 
 	text, _, err := ai.Execute(context.Background(), ai.LLMOptions{
-		Provider: provider, APIKey: apiKey, Model: model, OllamaHost: ollamaHost,
+		Provider: provider, APIKey: apiKey, Model: model, Extra: map[string]string{"ollama_host": ollamaHost},
 		Timeout: timeout, MaxRetries: cfg.LLM.MaxRetries,
 	}, prompt)
 	if err != nil {

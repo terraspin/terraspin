@@ -14,6 +14,14 @@ import (
 
 var anthropicAPI = "https://api.anthropic.com/v1/messages"
 
+type claudeProvider struct{}
+
+func init() { registerProvider(claudeProvider{}) }
+
+func (claudeProvider) Name() string   { return "claude" }
+func (claudeProvider) NeedsKey() bool { return true }
+func (claudeProvider) KeyEnv() string { return "ANTHROPIC_API_KEY" }
+
 type claudeRequest struct {
 	Model     string          `json:"model"`
 	MaxTokens int             `json:"max_tokens"`
@@ -54,78 +62,72 @@ type claudeError struct {
 	Message string `json:"message"`
 }
 
-// QueryClaude sends a prompt to the Anthropic Claude API using the
-// Messages API and returns the raw text response along with total token count.
-// model defaults to CLAUDE_MODEL env var, then "claude-sonnet-4-6".
-// apiKey falls back to ANTHROPIC_API_KEY env var when empty.
-// Endpoint URL falls back to ANTHROPIC_BASE_URL env var, then the default.
-// The caller should wrap ctx with a timeout: context.WithTimeout(ctx, 30*time.Second).
+// QueryClaude sends a prompt to the Anthropic Claude API using the Messages API.
 func QueryClaude(ctx context.Context, apiKey, model, prompt string) (string, int, error) {
-	if apiKey == "" {
-		apiKey = os.Getenv("ANTHROPIC_API_KEY")
+	response, err := (claudeProvider{}).Query(ctx, Request{Model: model, System: SystemPrompt, Prompt: prompt, APIKey: apiKey})
+	return response.Text, response.Tokens, err
+}
+
+func (claudeProvider) Query(ctx context.Context, request Request) (Response, error) {
+	if request.APIKey == "" {
+		request.APIKey = os.Getenv("ANTHROPIC_API_KEY")
 	}
-	if model == "" {
-		model = os.Getenv("CLAUDE_MODEL")
-		if model == "" {
-			model = "claude-sonnet-4-6"
+	if request.Model == "" {
+		request.Model = os.Getenv("CLAUDE_MODEL")
+		if request.Model == "" {
+			request.Model = "claude-sonnet-4-6"
 		}
 	}
 	endpoint := anthropicAPI
-	if v := os.Getenv("ANTHROPIC_BASE_URL"); v != "" {
-		endpoint = v
+	if value := os.Getenv("ANTHROPIC_BASE_URL"); value != "" {
+		endpoint = value
 	}
 
-	body := claudeRequest{
-		Model:     model,
-		MaxTokens: 1024,
-		System:    SystemPrompt,
-		Messages:  []claudeMessage{{Role: "user", Content: prompt}},
-	}
-
-	raw, err := json.Marshal(body)
+	raw, err := json.Marshal(claudeRequest{
+		Model: request.Model, MaxTokens: 1024, System: request.System,
+		Messages: []claudeMessage{{Role: "user", Content: request.Prompt}},
+	})
 	if err != nil {
-		return "", 0, fmt.Errorf("claude: marshal request: %w", err)
+		return Response{}, fmt.Errorf("claude: marshal request: %w", err)
 	}
 
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(raw))
+	httpRequest, err := http.NewRequestWithContext(ctx, http.MethodPost, endpoint, bytes.NewReader(raw))
 	if err != nil {
-		return "", 0, fmt.Errorf("claude: create request: %w", err)
+		return Response{}, fmt.Errorf("claude: create request: %w", err)
 	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("x-api-key", apiKey)
-	req.Header.Set("anthropic-version", "2023-06-01")
+	httpRequest.Header.Set("Content-Type", "application/json")
+	httpRequest.Header.Set("x-api-key", request.APIKey)
+	httpRequest.Header.Set("anthropic-version", "2023-06-01")
 
-	resp, err := http.DefaultClient.Do(req)
+	response, err := http.DefaultClient.Do(httpRequest)
 	if err != nil {
-		return "", 0, fmt.Errorf("claude: send request: %w", err)
+		return Response{}, fmt.Errorf("claude: send request: %w", err)
 	}
-	defer resp.Body.Close()
+	defer response.Body.Close()
 
-	respRaw, err := io.ReadAll(resp.Body)
+	responseRaw, err := io.ReadAll(response.Body)
 	if err != nil {
-		return "", 0, fmt.Errorf("claude: read response: %w", err)
+		return Response{}, fmt.Errorf("claude: read response: %w", err)
 	}
-
-	if resp.StatusCode != http.StatusOK {
-		message := string(respRaw)
-		var cerr claudeError
-		if json.Unmarshal(respRaw, &cerr) == nil && cerr.Message != "" {
-			message = cerr.Message
+	if response.StatusCode != http.StatusOK {
+		message := string(responseRaw)
+		var claudeErrorResponse claudeError
+		if json.Unmarshal(responseRaw, &claudeErrorResponse) == nil && claudeErrorResponse.Message != "" {
+			message = claudeErrorResponse.Message
 		}
-		return "", 0, &HTTPError{Provider: "claude", StatusCode: resp.StatusCode, Message: message, RetryAfter: parseRetryAfter(resp.Header.Get("Retry-After"))}
+		return Response{}, &HTTPError{Provider: "claude", StatusCode: response.StatusCode, Message: message, RetryAfter: parseRetryAfter(response.Header.Get("Retry-After"))}
 	}
 
-	var cresp claudeResponse
-	if err := json.Unmarshal(respRaw, &cresp); err != nil {
-		return "", 0, fmt.Errorf("claude: parse response: %w", err)
+	var parsed claudeResponse
+	if err := json.Unmarshal(responseRaw, &parsed); err != nil {
+		return Response{}, fmt.Errorf("claude: parse response: %w", err)
 	}
-
-	if len(cresp.Content) == 0 {
-		return "", 0, fmt.Errorf("claude: no text content in response")
+	if len(parsed.Content) == 0 {
+		return Response{}, fmt.Errorf("claude: no text content in response")
 	}
 	tokens := 0
-	if cresp.Usage != nil {
-		tokens = cresp.Usage.InputTokens + cresp.Usage.OutputTokens
+	if parsed.Usage != nil {
+		tokens = parsed.Usage.InputTokens + parsed.Usage.OutputTokens
 	}
-	return cresp.Content[0].Text, tokens, nil
+	return Response{Text: parsed.Content[0].Text, Tokens: tokens}, nil
 }

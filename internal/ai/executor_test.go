@@ -226,7 +226,7 @@ func TestExecuteAllowsOllamaWithoutKey(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	_, _, err := Execute(context.Background(), LLMOptions{Provider: "ollama", OllamaHost: srv.URL, Timeout: time.Second}, "prompt")
+	_, _, err := Execute(context.Background(), LLMOptions{Provider: "ollama", Extra: map[string]string{"ollama_host": srv.URL}, Timeout: time.Second}, "prompt")
 	if err != nil {
 		t.Fatal(err)
 	}
