@@ -71,6 +71,61 @@ func TestCLIOpenAIAndOllamaPayloadsExcludeAttributeValues(t *testing.T) {
 	})
 }
 
+func TestCLIPayloadsSanitizeHostileAddresses(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(t.TempDir(), "terraspin")
+	build := exec.Command("go", "build", "-o", binary, ".")
+	build.Dir = filepath.Join(repoRoot, "cmd", "terraspin")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build CLI: %v\n%s", err, output)
+	}
+
+	bodies := make(chan []byte, 2)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		bodies <- body
+		_, _ = w.Write([]byte(`{"response":"{\\"summary\\":\\"LLM narrative\\",\\"risk_assessment\\":\\"low\\",\\"recommendations\\":[],\\"rollback_strategy\\":\\"none\\"}"}`))
+	}))
+	defer server.Close()
+
+	workdir := t.TempDir()
+	hostilePlan := filepath.Join(repoRoot, "testdata", "security", "hostile_address_plan.json")
+	emptyPlan := filepath.Join(repoRoot, "testdata", "plan_empty.json")
+	for _, args := range [][]string{{"--llm", "ollama", "--ollama-host", server.URL, hostilePlan}, {"diff", "--llm", "ollama", "--ollama-host", server.URL, hostilePlan, emptyPlan}} {
+		runPayloadCommand(t, binary, workdir, os.Environ(), args)
+	}
+
+	for _, command := range []string{"analyze", "diff"} {
+		select {
+		case body := <-bodies:
+			var payload struct {
+				Prompt string `json:"prompt"`
+			}
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatal(err)
+			}
+			if strings.Contains(payload.Prompt, "HOSTILE_LLM_INJECTION") {
+				t.Fatalf("%s payload contains hostile address: %s", command, payload.Prompt)
+			}
+			if !strings.Contains(payload.Prompt, "<invalid-address>") {
+				t.Fatalf("%s payload does not neutralize hostile address: %s", command, payload.Prompt)
+			}
+			if !strings.Contains(payload.Prompt, `aws_s3_bucket.logs["prod-logs"]`) {
+				t.Fatalf("%s payload lost valid address: %s", command, payload.Prompt)
+			}
+		case <-time.After(5 * time.Second):
+			t.Fatalf("%s payload was not captured", command)
+		}
+	}
+}
+
 func payloadPlans(t *testing.T) (string, string, string) {
 	t.Helper()
 	workdir := t.TempDir()

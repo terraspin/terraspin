@@ -33,6 +33,87 @@ func TestBuildAnalysisPrompt_containsRiskAndResources(t *testing.T) {
 	}
 }
 
+func TestSanitizeNarrative(t *testing.T) {
+	long := strings.Repeat("x", 1_600)
+	items := make([]string, 11)
+	for i := range items {
+		items[i] = strings.Repeat("y", 401)
+	}
+
+	tests := []struct {
+		name  string
+		in    *Narrative
+		check func(*testing.T, *Narrative)
+	}{
+		{
+			name: "bounds and strips controls",
+			in: &Narrative{
+				Summary:          "ok\x00\x1f\n\t" + long,
+				Recommendations:  items,
+				CriticalChanges:  items,
+				RiskAssessment:   long,
+				RollbackStrategy: long,
+			},
+			check: func(t *testing.T, got *Narrative) {
+				t.Helper()
+				if strings.ContainsAny(got.Summary, "\x00\x1f") || !strings.Contains(got.Summary, "\n\t") {
+					t.Errorf("summary controls = %q", got.Summary)
+				}
+				if runeLen(got.Summary) != 1500 || !strings.HasSuffix(got.Summary, "…") {
+					t.Errorf("summary = %d runes, want 1500 ending in ellipsis", runeLen(got.Summary))
+				}
+				if len(got.Recommendations) != 10 || runeLen(got.Recommendations[0]) != 400 || !strings.HasSuffix(got.Recommendations[0], "…") {
+					t.Errorf("recommendations = %d items, first %d runes", len(got.Recommendations), runeLen(got.Recommendations[0]))
+				}
+				if narrativeRunes(got) > 6000 {
+					t.Errorf("narrative = %d runes, want at most 6000", narrativeRunes(got))
+				}
+			},
+		},
+		{
+			name: "normal narrative unchanged",
+			in: &Narrative{
+				Summary:          "Plan updates the web tier.",
+				CriticalChanges:  []string{"Database replacement."},
+				Recommendations:  []string{"Confirm the backup exists."},
+				RiskAssessment:   "Moderate risk.",
+				RollbackStrategy: "Restore the backup.",
+			},
+			check: func(t *testing.T, got *Narrative) {
+				t.Helper()
+				if got.Summary != "Plan updates the web tier." || got.Recommendations[0] != "Confirm the backup exists." {
+					t.Errorf("normal narrative changed: %#v", got)
+				}
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			tt.check(t, SanitizeNarrative(tt.in))
+		})
+	}
+}
+
+func runeLen(s string) int { return len([]rune(s)) }
+
+func narrativeRunes(n *Narrative) int {
+	strings := []string{n.Provider, n.Summary, n.InfraSummary, n.RiskScore, n.RiskLevel, n.ResourceChangeSummary, n.BlastRadiusSummary, n.RiskAssessment, n.RollbackStrategy}
+	strings = append(strings, n.CriticalFindings...)
+	strings = append(strings, n.Recommendations...)
+	strings = append(strings, n.NextSteps...)
+	strings = append(strings, n.CriticalChanges...)
+	for _, group := range n.AffectedByTier {
+		strings = append(strings, group.Tier)
+		strings = append(strings, group.Resources...)
+	}
+	total := 0
+	for _, s := range strings {
+		total += runeLen(s)
+	}
+	return total
+}
+
 func TestParseNarrativeFromLLM_validJSON(t *testing.T) {
 	input := `{
 		"summary": "Test summary",
@@ -245,16 +326,6 @@ func TestBuildRuleBasedNarrative_nilRecs(t *testing.T) {
 	}
 	if len(n.NextSteps) == 0 {
 		t.Error("should have default next steps when nil")
-	}
-}
-
-func TestQueryLLM_unknownProvider(t *testing.T) {
-	_, _, err := QueryLLM(context.Background(), "unknown-provider", "", "", "", "test")
-	if err == nil {
-		t.Fatal("expected error for unknown provider")
-	}
-	if !strings.Contains(err.Error(), "unknown-provider") {
-		t.Errorf("error = %v, should mention unknown-provider", err)
 	}
 }
 

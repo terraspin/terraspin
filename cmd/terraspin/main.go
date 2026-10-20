@@ -401,7 +401,7 @@ func buildLLMNarrative(ast *parser.PlanAST, score *analyzer.PlanScore, blast map
 		return nil, err
 	}
 
-	return ai.ParseNarrativeFromLLM(text), nil
+	return ai.SanitizeNarrative(ai.ParseNarrativeFromLLM(text)), nil
 }
 
 func checkFailOn(tier analyzer.RiskTier, threshold string) int {
