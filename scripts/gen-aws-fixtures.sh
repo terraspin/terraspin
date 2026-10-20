@@ -20,7 +20,8 @@ jq -S '
   (.resource_changes[] | select(.address == "aws_db_instance.insecure")) |= (
     .action_reason = "replace_because_cannot_update" |
     .change.actions = ["delete", "create"] |
-    .change.before = .change.after
+    .change.before = .change.after |
+    .change.before_sensitive = .change.after_sensitive
   )
 ' "$fixtures_dir/rds_insecure/plan.json" > "$fixtures_dir/rds_replace/plan.json"
 jq -S '

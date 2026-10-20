@@ -336,7 +336,18 @@
           "username": "synth_admin",
           "warning_event_categories": null
         },
-        "before_sensitive": false
+        "before_sensitive": {
+          "blue_green_update": [],
+          "listener_endpoint": [],
+          "master_user_secret": [],
+          "password": true,
+          "password_wo": true,
+          "replicas": [],
+          "restore_to_point_in_time": [],
+          "s3_import": [],
+          "tags_all": {},
+          "vpc_security_group_ids": []
+        }
       },
       "mode": "managed",
       "name": "insecure",
