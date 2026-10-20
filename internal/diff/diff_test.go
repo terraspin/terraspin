@@ -227,6 +227,13 @@ func TestBuildDiffPromptDoesNotContainAttributeValues(t *testing.T) {
 	}
 }
 
+func TestBuildDiffPromptExcludesPlanVersions(t *testing.T) {
+	result := &DiffResult{LabelA: "a", LabelB: "b", VersionA: "HOSTILE_LLM_INJECTION", VersionB: "1.2"}
+	if prompt := BuildDiffPrompt(result); strings.Contains(prompt, "HOSTILE_LLM_INJECTION") {
+		t.Fatal("diff prompt contains Terraform version")
+	}
+}
+
 func TestDiffSummaryText(t *testing.T) {
 	r := &DiffResult{
 		Summary: DriftSummary{Added: 2, Removed: 1, Modified: 3, Unchanged: 5, Total: 11},

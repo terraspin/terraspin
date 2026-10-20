@@ -304,7 +304,6 @@ func BuildDiffPrompt(result *DiffResult) string {
 	var b strings.Builder
 
 	fmt.Fprintf(&b, "Environment drift analysis between %q and %q:\n\n", result.LabelA, result.LabelB)
-	fmt.Fprintf(&b, "Terraform versions: %s vs %s\n\n", result.VersionA, result.VersionB)
 	fmt.Fprintf(&b, "Summary: %s\n\n", result.DiffSummaryText())
 	fmt.Fprintf(&b, "Resource differences:\n")
 
