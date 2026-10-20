@@ -13,14 +13,14 @@ This is a code-derived model of Terraspin v0.2.x, not a guarantee. **[VERIFIED]*
 
 - **[VERIFIED]** `cmd/terraspin.buildLLMNarrative` and `internal/ai.BuildAnalysisPrompt` send analyze risk data, resource addresses, actions, tiers, and affected-resource counts—not attribute maps. `internal/diff.BuildDiffPrompt` sends labels, Terraform versions, resource address/type/status, and changed-attribute counts—not attribute values. `cmd/terraspin.TestCLIPayloadsExcludeAttributeValuesIncludingSystem` and `TestCLIOpenAIAndOllamaPayloadsExcludeAttributeValues` cover these payloads.
 - **[VERIFIED]** `internal/ai.QueryClaude` sends `SystemPrompt` in Anthropic's `system` field and an API key in `x-api-key`. `internal/ai.QueryOpenAI` sends the same system prompt as a system message and uses `Authorization: Bearer`. `internal/ai.QueryOllama` sends only its user prompt—no system field and no API-key header; `cmd/terraspin.assertProviderPayloads` tests this difference.
-- **[VERIFIED]** `cmd/terraspin.buildLLMNarrative` and `internal/diff.BuildDiffPrompt` interpolate resource addresses into prompts. **[NOT VERIFIED]** No address-validation or prompt-injection mitigation test was found. Treat plan JSON as hostile and do not rely on an LLM to follow instructions embedded in addresses.
+- **[VERIFIED]** `internal/ai.BuildAnalysisPrompt` and `internal/diff.BuildDiffPrompt` pass resource addresses through `internal/safetext.SafeAddress`; invalid addresses become `<invalid-address>`, while invalid indexed keys become `["<redacted-key>"]`. `internal/safetext.TestSafeAddress` and `cmd/terraspin.TestCLIPayloadsSanitizeHostileAddresses` cover direct validation and recorded analyze/diff request payloads.
 
 ## Local and CI Outputs
 
 - **[VERIFIED]** `cmd/terraspin.postToCI` embeds complete analyze output in a GitHub PR comment or GitLab MR note. These outputs contain resource addresses, risk data, blast-radius information, and any narrative. `internal/integrations.NewGitHubClientFromEnv` uses `GITHUB_TOKEN`; `NewGitLabClientFromEnv` uses `GITLAB_TOKEN` or `CI_JOB_TOKEN`.
 - **[VERIFIED]** `cmd/terraspin.notifySlack` and `internal/integrations.SlackWebhook.SendRiskNotification` send the risk tier, score, action counts, and narrative summary when configured.
 - **[VERIFIED]** `internal/ai.QueryClaude`, `QueryOpenAI`, and `QueryOllama` include non-success provider response bodies in returned errors. Analyze and diff print those errors or fallback warnings to stderr. Treat provider error bodies as potentially sensitive.
-- **[NOT VERIFIED]** LLM output is not independently sanitized before being printed or included in comments/Slack. Use a trusted provider and review automated comments.
+- **[VERIFIED]** Analyze and diff call `internal/ai.SanitizeNarrative` immediately after `ParseNarrativeFromLLM`; it removes control characters except newline/tab, bounds strings, list items, lists, and the total narrative before formatter, PR/MR, or Slack use. `internal/ai.TestSanitizeNarrative` covers those limits.
 
 ## Configuration and CI
 
@@ -50,7 +50,8 @@ This is a code-derived model of Terraspin v0.2.x, not a guarantee. **[VERIFIED]*
 ## Limitations
 
 - **[VERIFIED]** Values that Terraform does not mark sensitive remain visible in local diff and MCP `explain_change` output through `internal/ai.RedactSensitive`, `cmd/terraspin.formatDiffText` / `formatDiffMD`, and `mcp.handleExplainChange`.
-- **[VERIFIED]** Resource addresses enter analyze and diff prompts through `cmd/terraspin.buildLLMNarrative` and `internal/diff.BuildDiffPrompt`.
+- **[VERIFIED]** Analyze and diff prompt resource addresses pass through `internal/safetext.SafeAddress` in `internal/ai.BuildAnalysisPrompt` and `internal/diff.BuildDiffPrompt`.
+- **[LIMIT]** Valid Terraform index keys still enter LLM prompts. Local stdout retains resource text and can display terminal escapes; LLM narrative has no Markdown/HTML escaping, so `@user` mentions remain possible in automated comments.
 - **[VERIFIED]** Release artifacts are currently unsigned: the `checksum` section remains active while the `signs` section in `.goreleaser.yml` is commented out.
 
 ## Blast-Radius Limits
