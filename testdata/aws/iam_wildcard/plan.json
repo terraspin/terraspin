@@ -1,0 +1,209 @@
+{
+  "applyable": true,
+  "complete": true,
+  "configuration": {
+    "provider_config": {
+      "aws": {
+        "expressions": {
+          "access_key": {
+            "constant_value": "test"
+          },
+          "region": {
+            "constant_value": "us-east-1"
+          },
+          "secret_key": {
+            "constant_value": "test"
+          },
+          "skip_credentials_validation": {
+            "constant_value": true
+          },
+          "skip_metadata_api_check": {
+            "constant_value": true
+          },
+          "skip_region_validation": {
+            "constant_value": true
+          },
+          "skip_requesting_account_id": {
+            "constant_value": true
+          }
+        },
+        "full_name": "registry.terraform.io/hashicorp/aws",
+        "name": "aws",
+        "version_constraint": "6.69.1"
+      }
+    },
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_iam_policy.wildcard",
+          "expressions": {
+            "name": {
+              "constant_value": "SYNTH_iam_wildcard"
+            },
+            "policy": {}
+          },
+          "mode": "managed",
+          "name": "wildcard",
+          "provider_config_key": "aws",
+          "schema_version": 0,
+          "type": "aws_iam_policy"
+        },
+        {
+          "address": "aws_iam_role.synthetic",
+          "expressions": {
+            "assume_role_policy": {},
+            "name": {
+              "constant_value": "SYNTH_iam_role"
+            }
+          },
+          "mode": "managed",
+          "name": "synthetic",
+          "provider_config_key": "aws",
+          "schema_version": 0,
+          "type": "aws_iam_role"
+        }
+      ]
+    }
+  },
+  "errored": false,
+  "format_version": "1.2",
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_iam_policy.wildcard",
+          "identity": {
+            "arn": null
+          },
+          "identity_schema_version": 0,
+          "mode": "managed",
+          "name": "wildcard",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "schema_version": 0,
+          "sensitive_values": {
+            "tags_all": {}
+          },
+          "type": "aws_iam_policy",
+          "values": {
+            "delay_after_policy_creation_in_ms": null,
+            "description": null,
+            "name": "SYNTH_iam_wildcard",
+            "path": "/",
+            "policy": "{\"Statement\":[{\"Action\":\"*\",\"Effect\":\"Allow\",\"Resource\":\"*\"}],\"Version\":\"2012-10-17\"}",
+            "tags": null
+          }
+        },
+        {
+          "address": "aws_iam_role.synthetic",
+          "identity": {
+            "account_id": null,
+            "name": null
+          },
+          "identity_schema_version": 0,
+          "mode": "managed",
+          "name": "synthetic",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "schema_version": 0,
+          "sensitive_values": {
+            "inline_policy": [],
+            "managed_policy_arns": [],
+            "tags_all": {}
+          },
+          "type": "aws_iam_role",
+          "values": {
+            "assume_role_policy": "{\"Statement\":[{\"Action\":\"sts:AssumeRole\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"}}],\"Version\":\"2012-10-17\"}",
+            "description": null,
+            "force_detach_policies": false,
+            "max_session_duration": 3600,
+            "name": "SYNTH_iam_role",
+            "path": "/",
+            "permissions_boundary": null,
+            "tags": null
+          }
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "aws_iam_policy.wildcard",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "delay_after_policy_creation_in_ms": null,
+          "description": null,
+          "name": "SYNTH_iam_wildcard",
+          "path": "/",
+          "policy": "{\"Statement\":[{\"Action\":\"*\",\"Effect\":\"Allow\",\"Resource\":\"*\"}],\"Version\":\"2012-10-17\"}",
+          "tags": null
+        },
+        "after_identity": {
+          "arn": null
+        },
+        "after_sensitive": {
+          "tags_all": {}
+        },
+        "after_unknown": {
+          "arn": true,
+          "attachment_count": true,
+          "id": true,
+          "name_prefix": true,
+          "policy_id": true,
+          "tags_all": true
+        },
+        "before": null,
+        "before_sensitive": false
+      },
+      "mode": "managed",
+      "name": "wildcard",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "type": "aws_iam_policy"
+    },
+    {
+      "address": "aws_iam_role.synthetic",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "assume_role_policy": "{\"Statement\":[{\"Action\":\"sts:AssumeRole\",\"Effect\":\"Allow\",\"Principal\":{\"Service\":\"ec2.amazonaws.com\"}}],\"Version\":\"2012-10-17\"}",
+          "description": null,
+          "force_detach_policies": false,
+          "max_session_duration": 3600,
+          "name": "SYNTH_iam_role",
+          "path": "/",
+          "permissions_boundary": null,
+          "tags": null
+        },
+        "after_identity": {
+          "account_id": null,
+          "name": null
+        },
+        "after_sensitive": {
+          "inline_policy": [],
+          "managed_policy_arns": [],
+          "tags_all": {}
+        },
+        "after_unknown": {
+          "arn": true,
+          "create_date": true,
+          "id": true,
+          "inline_policy": true,
+          "managed_policy_arns": true,
+          "name_prefix": true,
+          "tags_all": true,
+          "unique_id": true
+        },
+        "before": null,
+        "before_sensitive": false
+      },
+      "mode": "managed",
+      "name": "synthetic",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "type": "aws_iam_role"
+    }
+  ],
+  "terraform_version": "1.16.5"
+}
