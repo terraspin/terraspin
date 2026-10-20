@@ -42,6 +42,18 @@ Test files are co-located with their packages (e.g., `internal/parser/parse_test
 
 CLI snapshots live in `testdata/golden/`. Review output changes normally; regenerate approved snapshots with `go test ./cmd/terraspin -run TestCLIGolden -update`. Parser fuzzing is seeded from every `testdata/*.json` fixture and can be run with `go test ./internal/parser -fuzz=FuzzParsePlan -fuzztime=60s`.
 
+## AWS fixture regeneration
+
+AWS plan fixtures live in `testdata/aws/`. Regenerate them with:
+
+```bash
+scripts/gen-aws-fixtures.sh
+```
+
+The script requires Terraform, `jq`, and network access to the Terraform Registry to install the pinned AWS provider. It uses fake credentials and provider skip flags, so it does not need an AWS account and never applies a plan. `rds_replace` and `s3_destroy` are explicitly labeled `DERIVED`; they are transformed from generated plans rather than Terraform configurations.
+
+Release note draft: Added AWS plan fixtures generated offline from the AWS provider.
+
 ## Lint
 
 ```bash
