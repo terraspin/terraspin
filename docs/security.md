@@ -18,6 +18,7 @@ This is a code-derived model of Terraspin v0.2.x, not a guarantee. **[VERIFIED]*
 ## Local and CI Outputs
 
 - **[VERIFIED]** `cmd/terraspin.postToCI` embeds complete analyze output in a GitHub PR comment or GitLab MR note. These outputs contain resource addresses, risk data, blast-radius information, and any narrative. `internal/integrations.NewGitHubClientFromEnv` uses `GITHUB_TOKEN`; `NewGitLabClientFromEnv` uses `GITLAB_TOKEN` or `CI_JOB_TOKEN`.
+- **[VERIFIED]** Rule `description` and `remediation` values from `.terraspin.yml` appear in local output and PR/MR comments, so configuration from an untrusted PR can insert displayed text.
 - **[VERIFIED]** `cmd/terraspin.notifySlack` and `internal/integrations.SlackWebhook.SendRiskNotification` send the risk tier, score, action counts, and narrative summary when configured.
 - **[VERIFIED]** `internal/ai.QueryClaude`, `QueryOpenAI`, and `QueryOllama` include non-success provider response bodies in returned errors. Analyze and diff print those errors or fallback warnings to stderr. Treat provider error bodies as potentially sensitive.
 - **[VERIFIED]** Analyze and diff call `internal/ai.SanitizeNarrative` immediately after `ParseNarrativeFromLLM`; it removes control characters except newline/tab, bounds strings, list items, lists, and the total narrative before formatter, PR/MR, or Slack use. `internal/ai.TestSanitizeNarrative` covers those limits.
