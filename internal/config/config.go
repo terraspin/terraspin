@@ -2,8 +2,11 @@
 package config
 
 import (
+	_ "embed"
 	"fmt"
 	"os"
+	"sort"
+	"strings"
 	"time"
 
 	"gopkg.in/yaml.v3"
@@ -11,11 +14,13 @@ import (
 
 // Config is the top-level .terraspin.yml structure.
 type Config struct {
-	Version int          `yaml:"version"`
-	LLM     *LLMConfig   `yaml:"llm,omitempty"`
-	Risk    *RiskConfig  `yaml:"risk,omitempty"`
-	Rules   []Rule       `yaml:"rules,omitempty"`
-	Slack   *SlackConfig `yaml:"slack,omitempty"`
+	Version      int          `yaml:"version"`
+	LLM          *LLMConfig   `yaml:"llm,omitempty"`
+	Risk         *RiskConfig  `yaml:"risk,omitempty"`
+	Rules        []Rule       `yaml:"rules,omitempty"`
+	BuiltinRules *bool        `yaml:"builtin_rules,omitempty"`
+	DisableRules []string     `yaml:"disable_rules,omitempty"`
+	Slack        *SlackConfig `yaml:"slack,omitempty"`
 }
 
 // LLMConfig holds LLM provider configuration.
@@ -53,6 +58,7 @@ type Rule struct {
 	ID          string    `yaml:"id"`
 	Severity    string    `yaml:"severity"`
 	Description string    `yaml:"description"`
+	Remediation string    `yaml:"remediation,omitempty"`
 	Match       RuleMatch `yaml:"match"`
 }
 
@@ -64,6 +70,7 @@ type RuleMatch struct {
 	Value               any    `yaml:"value,omitempty"`
 	Value2              any    `yaml:"value_2,omitempty"`
 	Contains            string `yaml:"contains,omitempty"`
+	Contains2           string `yaml:"contains_2,omitempty"`
 	Action              string `yaml:"action,omitempty"`
 	WorkspacePattern    string `yaml:"workspace_pattern,omitempty"`
 }
@@ -73,6 +80,8 @@ type RuleMatchResult struct {
 	RuleID      string `json:"rule_id"`
 	Severity    string `json:"severity"`
 	Description string `json:"description"`
+	Remediation string `json:"remediation,omitempty"`
+	Source      string `json:"source"`
 	Address     string `json:"address"`
 }
 
@@ -122,6 +131,23 @@ func Load(path string) (*Config, error) {
 	return cfg, nil
 }
 
+//go:embed builtin_rules.yaml
+var builtinRulesYAML []byte
+
+func builtinRules() ([]Rule, error) {
+	var data struct {
+		Rules []Rule `yaml:"rules"`
+	}
+	if err := yaml.Unmarshal(builtinRulesYAML, &data); err != nil {
+		return nil, fmt.Errorf("parse built-in rules: %w", err)
+	}
+	return data.Rules, nil
+}
+
+func (c *Config) builtinRulesEnabled() bool {
+	return c.BuiltinRules == nil || *c.BuiltinRules
+}
+
 func (c *Config) validate() error {
 	if c.Version != 1 {
 		return fmt.Errorf("unsupported version %d", c.Version)
@@ -134,7 +160,28 @@ func (c *Config) validate() error {
 			return fmt.Errorf("llm.max_retries: must be non-negative")
 		}
 	}
+	builtins, err := builtinRules()
+	if err != nil {
+		return err
+	}
+	builtinIDs := make(map[string]struct{}, len(builtins))
+	for _, rule := range builtins {
+		builtinIDs[rule.ID] = struct{}{}
+	}
+	for _, id := range c.DisableRules {
+		if _, ok := builtinIDs[id]; !ok {
+			ids := make([]string, 0, len(builtinIDs))
+			for id := range builtinIDs {
+				ids = append(ids, id)
+			}
+			sort.Strings(ids)
+			return fmt.Errorf("disable_rules: unknown built-in rule %q (available: %s)", id, strings.Join(ids, ", "))
+		}
+	}
 	for i, r := range c.Rules {
+		if _, ok := builtinIDs[r.ID]; ok {
+			return fmt.Errorf("rules[%q]: conflicts with built-in rule", r.ID)
+		}
 		if r.ID == "" {
 			return fmt.Errorf("rules[%d]: id is required", i)
 		}

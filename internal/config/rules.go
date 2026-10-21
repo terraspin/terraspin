@@ -8,22 +8,47 @@ import (
 	"github.com/terraspin/terraspin/internal/parser"
 )
 
-// EvaluateRules checks all custom rules against a plan and returns matches.
+// EvaluateRules checks configured and built-in rules against a plan and returns matches.
 func EvaluateRules(cfg *Config, ast *parser.PlanAST) []RuleMatchResult {
-	if cfg == nil || len(cfg.Rules) == 0 {
+	if cfg == nil {
 		return nil
 	}
+	type configuredRule struct {
+		rule   Rule
+		source string
+	}
+	var rules []configuredRule
+	if cfg.builtinRulesEnabled() {
+		builtins, err := builtinRules()
+		if err == nil {
+			disabled := make(map[string]bool, len(cfg.DisableRules))
+			for _, id := range cfg.DisableRules {
+				disabled[id] = true
+			}
+			for _, rule := range builtins {
+				if !disabled[rule.ID] {
+					rules = append(rules, configuredRule{rule: rule, source: "builtin"})
+				}
+			}
+		}
+	}
+	for _, rule := range cfg.Rules {
+		rules = append(rules, configuredRule{rule: rule, source: "custom"})
+	}
+
 	var results []RuleMatchResult
 	for _, rc := range ast.Changes {
 		if rc.Action == parser.ActionNoOp || rc.Action == parser.ActionRead {
 			continue
 		}
-		for _, rule := range cfg.Rules {
-			if matchRule(rule, rc, ast.Workspace) {
+		for _, configured := range rules {
+			if matchRule(configured.rule, rc, ast.Workspace) {
 				results = append(results, RuleMatchResult{
-					RuleID:      rule.ID,
-					Severity:    rule.Severity,
-					Description: rule.Description,
+					RuleID:      configured.rule.ID,
+					Severity:    configured.rule.Severity,
+					Description: configured.rule.Description,
+					Remediation: configured.rule.Remediation,
+					Source:      configured.source,
 					Address:     rc.Address,
 				})
 			}
@@ -54,7 +79,7 @@ func matchRule(rule Rule, rc parser.ResourceChange, workspace string) bool {
 			return false
 		}
 	}
-	if m.AttributePath != "" && m.AttributePath2 != "" && m.Value2 != nil {
+	if m.AttributePath != "" && m.AttributePath2 != "" && (m.Value2 != nil || m.Contains2 != "") {
 		if matched, correlated := matchesCorrelatedAttributes(rc.After, rc.Before, m); correlated {
 			return matched
 		}
@@ -62,7 +87,7 @@ func matchRule(rule Rule, rc parser.ResourceChange, workspace string) bool {
 	if m.AttributePath != "" && !matchesAttribute(rc.After, rc.Before, m.AttributePath, m.Value, m.Contains) {
 		return false
 	}
-	if m.AttributePath2 != "" && m.Value2 != nil && !matchesAttribute(rc.After, rc.Before, m.AttributePath2, m.Value2, "") {
+	if m.AttributePath2 != "" && (m.Value2 != nil || m.Contains2 != "") && !matchesAttribute(rc.After, rc.Before, m.AttributePath2, m.Value2, m.Contains2) {
 		return false
 	}
 	return true
@@ -102,7 +127,7 @@ func matchesCorrelatedAttributes(after, before map[string]any, match RuleMatch) 
 			continue
 		}
 		for _, secondValue := range secondValues {
-			if firstValue.Index == secondValue.Index && attributeValueMatches(secondValue.Value, match.Value2, "") {
+			if firstValue.Index == secondValue.Index && attributeValueMatches(secondValue.Value, match.Value2, match.Contains2) {
 				return true, true
 			}
 		}

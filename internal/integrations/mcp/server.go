@@ -62,9 +62,9 @@ func planFromArgs(args map[string]any) (*parser.PlanAST, *analyzer.PlanScore, ma
 	ai.RedactSensitive(ast)
 	score := analyzer.ScorePlan(ast)
 
-	// Attempt to load custom rules from cwd and apply them
+	// Attempt to load configured and built-in rules from cwd and apply them.
 	cfg, cfgErr := config.Load(".terraspin.yml")
-	if cfgErr == nil && cfg != nil && len(cfg.Rules) > 0 {
+	if cfgErr == nil && cfg != nil {
 		ruleMatches := config.EvaluateRules(cfg, ast)
 		analyzer.ApplyCustomRules(score, ruleMatches)
 	}
@@ -135,6 +135,17 @@ func handleAnalyzePlan(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 		score.Counts[analyzer.TierCritical], score.Counts[analyzer.TierHigh],
 		score.Counts[analyzer.TierMedium], score.Counts[analyzer.TierLow]))
 
+	if len(score.Findings) > 0 {
+		b.WriteString("### Policy Findings\n\n")
+		for _, finding := range score.Findings {
+			b.WriteString(fmt.Sprintf("- **[%s] %s** `%s`: %s\n", strings.ToUpper(finding.Severity), finding.RuleID, finding.Address, finding.Message))
+			if finding.Remediation != "" {
+				b.WriteString(fmt.Sprintf("  - Fix: %s\n", finding.Remediation))
+			}
+		}
+		b.WriteString("\n")
+	}
+
 	// Critical & high changes with blast radius
 	b.WriteString("### Critical & High Risk Changes\n\n")
 	for _, rs := range score.ResourceScores {
@@ -188,6 +199,7 @@ func handleAnalyzePlan(ctx context.Context, req mcp.CallToolRequest) (*mcp.CallT
 		},
 		"resource_changes_count": len(ast.Changes),
 		"resources":              entries,
+		"findings":               score.Findings,
 	})
 
 	b.WriteString(fmt.Sprintf("\n```json\n%s\n```\n", string(summaryJSON)))
@@ -319,6 +331,15 @@ func handleExplainChange(ctx context.Context, req mcp.CallToolRequest) (*mcp.Cal
 	if rs != nil {
 		b.WriteString(fmt.Sprintf("**Risk:** %s (score: %.1f)\n", strings.ToUpper(string(rs.Tier)), rs.Score))
 	}
+	for _, finding := range score.Findings {
+		if finding.Address != addr {
+			continue
+		}
+		b.WriteString(fmt.Sprintf("\n### Policy Finding\n\n**[%s] %s:** %s\n", strings.ToUpper(finding.Severity), finding.RuleID, finding.Message))
+		if finding.Remediation != "" {
+			b.WriteString(fmt.Sprintf("\nFix: %s\n", finding.Remediation))
+		}
+	}
 
 	if rc.ActionReason != "" {
 		b.WriteString(fmt.Sprintf("**Reason:** %s\n", rc.ActionReason))
@@ -389,9 +410,10 @@ func handleGetRiskSummary(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 	}
 
 	summary := struct {
-		OverallRisk  string         `json:"overall_risk"`
-		OverallScore float64        `json:"overall_score"`
-		TierCounts   map[string]int `json:"tier_counts"`
+		OverallRisk  string             `json:"overall_risk"`
+		OverallScore float64            `json:"overall_score"`
+		TierCounts   map[string]int     `json:"tier_counts"`
+		Findings     []analyzer.Finding `json:"findings"`
 		Resources    []struct {
 			Address   string  `json:"address"`
 			Action    string  `json:"action"`
@@ -407,6 +429,7 @@ func handleGetRiskSummary(ctx context.Context, req mcp.CallToolRequest) (*mcp.Ca
 			"medium":   score.Counts[analyzer.TierMedium],
 			"low":      score.Counts[analyzer.TierLow],
 		},
+		Findings: score.Findings,
 	}
 
 	for _, rs := range score.ResourceScores {
