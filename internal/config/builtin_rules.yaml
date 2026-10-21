@@ -1,0 +1,11 @@
+rules:
+  - id: AWS-SG-001
+    severity: critical
+    description: SSH is open to the internet.
+    remediation: Restrict SSH access to trusted CIDR ranges.
+    match:
+      resource_type_pattern: aws_security_group
+      attribute_path: ingress[*].cidr_blocks
+      contains: 0.0.0.0/0
+      attribute_path_2: ingress[*].from_port
+      value_2: 22

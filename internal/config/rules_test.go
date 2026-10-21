@@ -15,6 +15,23 @@ func TestEvaluateRules_noRules(t *testing.T) {
 	}
 }
 
+func TestEvaluateRulesBuiltinSSH(t *testing.T) {
+	ast := &parser.PlanAST{Changes: []parser.ResourceChange{{
+		Address: "aws_security_group.open_ssh_world",
+		Type:    "aws_security_group",
+		Action:  parser.ActionCreate,
+		After: map[string]any{"ingress": []any{map[string]any{
+			"cidr_blocks": []any{"0.0.0.0/0"},
+			"from_port":   float64(22),
+		}}},
+	}}}
+
+	results := EvaluateRules(&Config{Version: 1}, ast)
+	if len(results) != 1 || results[0].RuleID != "AWS-SG-001" || results[0].Severity != "critical" {
+		t.Fatalf("results = %#v, want AWS-SG-001 critical match", results)
+	}
+}
+
 func TestEvaluateRules_nilConfig(t *testing.T) {
 	results := EvaluateRules(nil, &parser.PlanAST{})
 	if len(results) != 0 {
@@ -426,5 +443,24 @@ func TestValuesEqual(t *testing.T) {
 		if got != tt.want {
 			t.Errorf("valuesEqual(%v, %v) = %v, want %v", tt.a, tt.b, got, tt.want)
 		}
+	}
+}
+
+func TestEvaluateRulesContains2OverridesValue2(t *testing.T) {
+	resource := parser.ResourceChange{Action: parser.ActionCreate, After: map[string]any{
+		"ingress": []any{map[string]any{
+			"cidr_blocks": []any{"0.0.0.0/0"},
+			"from_port":   "22",
+		}},
+	}}
+	rule := Rule{Match: RuleMatch{
+		AttributePath:  "ingress[*].cidr_blocks",
+		Contains:       "0.0.0.0/0",
+		AttributePath2: "ingress[*].from_port",
+		Value2:         "443",
+		Contains2:      "22",
+	}}
+	if !matchRule(rule, resource, "") {
+		t.Fatal("contains_2 should override value_2 in correlated matching")
 	}
 }

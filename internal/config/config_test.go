@@ -210,6 +210,28 @@ func TestLoad_InvalidYAML(t *testing.T) {
 	}
 }
 
+func TestLoad_BuiltinRuleControls(t *testing.T) {
+	for _, tc := range []struct {
+		name    string
+		content string
+		want    string
+	}{
+		{"unknown disabled rule", "version: 1\ndisable_rules: [NO-SUCH-RULE]\n", "NO-SUCH-RULE"},
+		{"custom builtin ID conflict", "version: 1\nrules:\n  - id: AWS-SG-001\n    severity: high\n    match:\n      action: create\n", "AWS-SG-001"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			path := filepath.Join(t.TempDir(), ".terraspin.yml")
+			if err := os.WriteFile(path, []byte(tc.content), 0644); err != nil {
+				t.Fatal(err)
+			}
+			_, err := Load(path)
+			if err == nil || !strings.Contains(err.Error(), tc.want) {
+				t.Fatalf("Load() error = %v, want %q", err, tc.want)
+			}
+		})
+	}
+}
+
 func TestLoad_FullConfig(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, ".terraspin.yml")
