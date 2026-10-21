@@ -150,8 +150,10 @@ func TestEvaluateRules_noopSkipped(t *testing.T) {
 }
 
 func TestEvaluateRules_attributeValue(t *testing.T) {
+	builtinRules := false
 	cfg := &Config{
-		Version: 1,
+		Version:      1,
+		BuiltinRules: &builtinRules,
 		Rules: []Rule{
 			{
 				ID:       "public-rds",
