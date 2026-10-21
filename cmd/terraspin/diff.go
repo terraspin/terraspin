@@ -41,7 +41,7 @@ func diffCmd(args []string) {
 
 	format := fs.String("format", "text", "output format: text|json|markdown")
 	noAI := fs.Bool("no-ai", false, "rule-based analysis only, skip LLM call")
-	llmProvider := fs.String("llm", "claude", "LLM provider: claude|openai|ollama")
+	llmProvider := fs.String("llm", "claude", "LLM provider: bedrock|claude|openai|ollama")
 	llmModel := fs.String("model", "", "LLM model name (provider default if empty)")
 	ollamaHost := fs.String("ollama-host", "http://localhost:11434", "Ollama host URL")
 	labelA := fs.String("label-a", "plan-a", "label for the first plan")
@@ -55,7 +55,7 @@ Compare two terraform plan JSON files and produce a drift analysis.
 Flags:
   --format string      output format: text|json|markdown (default "text")
   --no-ai              rule-based analysis only, skip LLM call
-  --llm string         LLM provider: claude|openai|ollama (default "claude")
+  --llm string         LLM provider: bedrock|claude|openai|ollama (default "claude")
   --model string       LLM model name (provider default if empty)
   --ollama-host string Ollama host URL (default "http://localhost:11434")
   --label-a string     label for the first plan (default "plan-a")
