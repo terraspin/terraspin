@@ -143,6 +143,32 @@ rules:
 	}
 }
 
+func TestLoad_ValidatesSecondaryRuleAttributePath(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".terraspin.yml")
+	content := `
+version: 1
+rules:
+  - id: bad-secondary-path
+    severity: high
+    match:
+      resource_type_pattern: aws_security_group
+      attribute_path: ingress[0].from_port
+      attribute_path_2: ingress[*].cidr_blocks[*]
+`
+	if err := os.WriteFile(path, []byte(content), 0644); err != nil {
+		t.Fatal(err)
+	}
+	_, err := Load(path)
+	if err == nil {
+		t.Fatal("expected invalid secondary attribute path error")
+	}
+	for _, want := range []string{"bad-secondary-path", "attribute_path_2", `ingress[*].cidr_blocks[*]`} {
+		if !strings.Contains(err.Error(), want) {
+			t.Errorf("error = %q, want %q", err, want)
+		}
+	}
+}
+
 func TestValidate_InvalidVersion(t *testing.T) {
 	cfg := &Config{Version: 2}
 	if err := cfg.validate(); err == nil {

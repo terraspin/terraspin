@@ -265,6 +265,40 @@ func TestGetNestedValue_nested(t *testing.T) {
 	}
 }
 
+func TestEvaluateRulesListPaths(t *testing.T) {
+	resource := parser.ResourceChange{
+		Address: "aws_security_group.web",
+		Type:    "aws_security_group",
+		Action:  parser.ActionUpdate,
+		After: map[string]any{
+			"ingress": []any{
+				map[string]any{"cidr_blocks": []any{"10.0.0.0/8"}, "from_port": float64(22)},
+				map[string]any{"cidr_blocks": []any{"0.0.0.0/0"}, "from_port": float64(80)},
+			},
+			"protocol": "tcp",
+		},
+	}
+	for _, tc := range []struct {
+		name  string
+		match RuleMatch
+		want  bool
+	}{
+		{"wildcard list membership", RuleMatch{AttributePath: "ingress[*].cidr_blocks", Contains: "0.0.0.0/0"}, true},
+		{"indexed value", RuleMatch{AttributePath: "ingress[0].from_port", Value: 22}, true},
+		{"out of range", RuleMatch{AttributePath: "ingress[2].from_port", Value: 22}, false},
+		{"wildcard non-list", RuleMatch{AttributePath: "protocol[*]", Contains: "tcp"}, false},
+		{"secondary path is independent", RuleMatch{AttributePath: "ingress[*].cidr_blocks", Contains: "0.0.0.0/0", AttributePath2: "ingress[*].from_port", Value2: 22}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			cfg := &Config{Rules: []Rule{{ID: "list-path", Severity: "high", Match: tc.match}}}
+			got := len(EvaluateRules(cfg, &parser.PlanAST{Changes: []parser.ResourceChange{resource}})) == 1
+			if got != tc.want {
+				t.Errorf("matched = %t, want %t", got, tc.want)
+			}
+		})
+	}
+}
+
 func TestRuleCharacterizationLegacyFlatPathSemantics(t *testing.T) {
 	resource := parser.ResourceChange{
 		Type:   "aws_example",

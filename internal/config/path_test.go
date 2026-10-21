@@ -30,3 +30,38 @@ func TestParsePath(t *testing.T) {
 		})
 	}
 }
+
+func TestPathResolve(t *testing.T) {
+	root := map[string]any{
+		"ingress": []any{
+			map[string]any{"cidr_blocks": []any{"10.0.0.0/8", "0.0.0.0/0"}, "from_port": float64(22)},
+			map[string]any{"cidr_blocks": []any{"192.168.0.0/16"}, "from_port": float64(80)},
+		},
+		"protocol": "tcp",
+	}
+	for _, tc := range []struct {
+		path string
+		want []any
+	}{
+		{"ingress[0].from_port", []any{float64(22)}},
+		{"ingress[*].cidr_blocks", []any{[]any{"10.0.0.0/8", "0.0.0.0/0"}, []any{"192.168.0.0/16"}}},
+		{"ingress[2].from_port", nil},
+		{"protocol[*]", nil},
+	} {
+		t.Run(tc.path, func(t *testing.T) {
+			path, err := ParsePath(tc.path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			got := path.Resolve(root)
+			if len(got) != len(tc.want) {
+				t.Fatalf("Resolve() = %#v, want %#v", got, tc.want)
+			}
+			for i := range got {
+				if !valuesEqual(got[i], tc.want[i]) {
+					t.Errorf("Resolve()[%d] = %#v, want %#v", i, got[i], tc.want[i])
+				}
+			}
+		})
+	}
+}
