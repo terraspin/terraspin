@@ -4,8 +4,30 @@ set -euo pipefail
 repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 fixtures_dir="$repo_root/testdata/aws"
 
-for scenario_dir in "$fixtures_dir"/*; do
-  [ -f "$scenario_dir/main.tf" ] || continue
+generated_scenarios=(
+  ebs_encrypted
+  ebs_unencrypted
+  eks_private
+  eks_public_endpoint
+  eks_public_restricted
+  iam_wildcard
+  kms_rotation_off
+  kms_rotation_on
+  rds_defaults
+  rds_insecure
+  rds_secure
+  s3_public
+  sg_all_traffic_world
+  sg_clean
+  sg_open_rdp_world
+  sg_open_ssh_ipv6
+  sg_open_ssh_world
+  sg_ssh_internal
+)
+
+for scenario in "${generated_scenarios[@]}"; do
+  scenario_dir="$fixtures_dir/$scenario"
+  [ -f "$scenario_dir/main.tf" ] || { echo "missing $scenario_dir/main.tf" >&2; exit 1; }
   (
     cd "$scenario_dir"
     terraform init -backend=false -input=false >/dev/null

@@ -1,0 +1,273 @@
+{
+  "applyable": true,
+  "complete": true,
+  "configuration": {
+    "provider_config": {
+      "aws": {
+        "expressions": {
+          "access_key": {
+            "constant_value": "test"
+          },
+          "region": {
+            "constant_value": "us-east-1"
+          },
+          "secret_key": {
+            "constant_value": "test"
+          },
+          "skip_credentials_validation": {
+            "constant_value": true
+          },
+          "skip_metadata_api_check": {
+            "constant_value": true
+          },
+          "skip_region_validation": {
+            "constant_value": true
+          },
+          "skip_requesting_account_id": {
+            "constant_value": true
+          }
+        },
+        "full_name": "registry.terraform.io/hashicorp/aws",
+        "name": "aws",
+        "version_constraint": "6.69.1"
+      }
+    },
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_eks_cluster.public_restricted",
+          "expressions": {
+            "name": {
+              "constant_value": "SYNTH_eks_public_restricted"
+            },
+            "role_arn": {
+              "constant_value": "arn:aws:iam:::role/SYNTH_EKS_ROLE"
+            },
+            "vpc_config": [
+              {
+                "endpoint_public_access": {
+                  "constant_value": true
+                },
+                "public_access_cidrs": {
+                  "constant_value": [
+                    "10.0.0.0/8"
+                  ]
+                },
+                "subnet_ids": {
+                  "constant_value": [
+                    "subnet-SYNTH_EKS_A",
+                    "subnet-SYNTH_EKS_B"
+                  ]
+                }
+              }
+            ]
+          },
+          "mode": "managed",
+          "name": "public_restricted",
+          "provider_config_key": "aws",
+          "schema_version": 1,
+          "type": "aws_eks_cluster"
+        }
+      ]
+    }
+  },
+  "errored": false,
+  "format_version": "1.2",
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_eks_cluster.public_restricted",
+          "identity": {
+            "account_id": null,
+            "name": null,
+            "region": null
+          },
+          "identity_schema_version": 0,
+          "mode": "managed",
+          "name": "public_restricted",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "schema_version": 1,
+          "sensitive_values": {
+            "access_config": [],
+            "certificate_authority": [],
+            "compute_config": [],
+            "control_plane_scaling_config": [],
+            "encryption_config": [],
+            "identity": [],
+            "kube_api_server_config": [],
+            "kube_controller_manager_config": [],
+            "kube_scheduler_config": [],
+            "kubernetes_network_config": [],
+            "outpost_config": [],
+            "remote_network_config": [],
+            "storage_config": [],
+            "tags_all": {},
+            "upgrade_policy": [],
+            "vpc_config": [
+              {
+                "public_access_cidrs": [
+                  false
+                ],
+                "subnet_ids": [
+                  false,
+                  false
+                ]
+              }
+            ],
+            "zonal_shift_config": []
+          },
+          "type": "aws_eks_cluster",
+          "values": {
+            "bootstrap_self_managed_addons": true,
+            "enabled_cluster_log_types": null,
+            "encryption_config": [],
+            "force_update_version": null,
+            "name": "SYNTH_eks_public_restricted",
+            "outpost_config": [],
+            "region": "us-east-1",
+            "remote_network_config": [],
+            "role_arn": "arn:aws:iam:::role/SYNTH_EKS_ROLE",
+            "tags": null,
+            "timeouts": null,
+            "vpc_config": [
+              {
+                "endpoint_private_access": false,
+                "endpoint_public_access": true,
+                "public_access_cidrs": [
+                  "10.0.0.0/8"
+                ],
+                "security_group_ids": null,
+                "subnet_ids": [
+                  "subnet-SYNTH_EKS_A",
+                  "subnet-SYNTH_EKS_B"
+                ]
+              }
+            ],
+            "zonal_shift_config": []
+          }
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "aws_eks_cluster.public_restricted",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "bootstrap_self_managed_addons": true,
+          "enabled_cluster_log_types": null,
+          "encryption_config": [],
+          "force_update_version": null,
+          "name": "SYNTH_eks_public_restricted",
+          "outpost_config": [],
+          "region": "us-east-1",
+          "remote_network_config": [],
+          "role_arn": "arn:aws:iam:::role/SYNTH_EKS_ROLE",
+          "tags": null,
+          "timeouts": null,
+          "vpc_config": [
+            {
+              "endpoint_private_access": false,
+              "endpoint_public_access": true,
+              "public_access_cidrs": [
+                "10.0.0.0/8"
+              ],
+              "security_group_ids": null,
+              "subnet_ids": [
+                "subnet-SYNTH_EKS_A",
+                "subnet-SYNTH_EKS_B"
+              ]
+            }
+          ],
+          "zonal_shift_config": []
+        },
+        "after_identity": {
+          "account_id": null,
+          "name": null,
+          "region": null
+        },
+        "after_sensitive": {
+          "access_config": [],
+          "certificate_authority": [],
+          "compute_config": [],
+          "control_plane_scaling_config": [],
+          "encryption_config": [],
+          "identity": [],
+          "kube_api_server_config": [],
+          "kube_controller_manager_config": [],
+          "kube_scheduler_config": [],
+          "kubernetes_network_config": [],
+          "outpost_config": [],
+          "remote_network_config": [],
+          "storage_config": [],
+          "tags_all": {},
+          "upgrade_policy": [],
+          "vpc_config": [
+            {
+              "public_access_cidrs": [
+                false
+              ],
+              "subnet_ids": [
+                false,
+                false
+              ]
+            }
+          ],
+          "zonal_shift_config": []
+        },
+        "after_unknown": {
+          "access_config": true,
+          "arn": true,
+          "certificate_authority": true,
+          "cluster_id": true,
+          "compute_config": true,
+          "control_plane_scaling_config": true,
+          "created_at": true,
+          "deletion_protection": true,
+          "encryption_config": [],
+          "endpoint": true,
+          "id": true,
+          "identity": true,
+          "kube_api_server_config": true,
+          "kube_controller_manager_config": true,
+          "kube_scheduler_config": true,
+          "kubernetes_network_config": true,
+          "outpost_config": [],
+          "platform_version": true,
+          "remote_network_config": [],
+          "status": true,
+          "storage_config": true,
+          "tags_all": true,
+          "upgrade_policy": true,
+          "version": true,
+          "vpc_config": [
+            {
+              "cluster_security_group_id": true,
+              "control_plane_egress_mode": true,
+              "public_access_cidrs": [
+                false
+              ],
+              "subnet_ids": [
+                false,
+                false
+              ],
+              "vpc_id": true
+            }
+          ],
+          "zonal_shift_config": []
+        },
+        "before": null,
+        "before_sensitive": false
+      },
+      "mode": "managed",
+      "name": "public_restricted",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "type": "aws_eks_cluster"
+    }
+  ],
+  "terraform_version": "1.16.5"
+}
