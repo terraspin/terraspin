@@ -7,7 +7,14 @@ import (
 
 // Path is a parsed custom-rule attribute path.
 type Path struct {
-	segments []pathSegment
+	segments       []pathSegment
+	wildcardPrefix string
+}
+
+// IndexedValue pairs a wildcard-expanded list index with its resolved value.
+type IndexedValue struct {
+	Index int
+	Value any
 }
 
 type pathSegment struct {
@@ -37,9 +44,11 @@ func ParsePath(value string) (Path, error) {
 		segment := pathSegment{name: value[start:pos]}
 
 		if pos < len(value) && value[pos] == '[' {
+			wildcardPrefix := value[:pos]
 			pos++
 			if pos < len(value) && value[pos] == '*' {
 				segment.wildcard = true
+				path.wildcardPrefix = wildcardPrefix
 				wildcards++
 				pos++
 			} else {
@@ -107,6 +116,48 @@ func (p Path) Resolve(root any) []any {
 				}
 			default:
 				next = append(next, value)
+			}
+		}
+		values = next
+		if len(values) == 0 {
+			return nil
+		}
+	}
+	return values
+}
+
+// ResolveIndexed returns wildcard-expanded values paired with the index of the
+// element selected by [*]. It returns an empty slice for paths without [*].
+func (p Path) ResolveIndexed(root any) []IndexedValue {
+	if p.wildcardPrefix == "" {
+		return nil
+	}
+
+	values := []IndexedValue{{Index: -1, Value: root}}
+	for _, segment := range p.segments {
+		var next []IndexedValue
+		for _, indexed := range values {
+			object, ok := indexed.Value.(map[string]any)
+			if !ok {
+				continue
+			}
+			value, ok := object[segment.name]
+			if !ok {
+				continue
+			}
+			switch {
+			case segment.wildcard:
+				if list, ok := value.([]any); ok {
+					for index, item := range list {
+						next = append(next, IndexedValue{Index: index, Value: item})
+					}
+				}
+			case segment.hasIndex:
+				if list, ok := value.([]any); ok && segment.index < len(list) {
+					next = append(next, IndexedValue{Index: indexed.Index, Value: list[segment.index]})
+				}
+			default:
+				next = append(next, IndexedValue{Index: indexed.Index, Value: value})
 			}
 		}
 		values = next

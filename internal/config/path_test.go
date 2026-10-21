@@ -31,6 +31,21 @@ func TestParsePath(t *testing.T) {
 	}
 }
 
+func TestPathResolveIndexed(t *testing.T) {
+	root := map[string]any{"ingress": []any{
+		map[string]any{"from_port": float64(443)},
+		map[string]any{"from_port": float64(22)},
+	}}
+	path, err := ParsePath("ingress[*].from_port")
+	if err != nil {
+		t.Fatal(err)
+	}
+	got := path.ResolveIndexed(root)
+	if len(got) != 2 || got[0].Index != 0 || got[0].Value != float64(443) || got[1].Index != 1 || got[1].Value != float64(22) {
+		t.Fatalf("ResolveIndexed() = %#v", got)
+	}
+}
+
 func TestPathResolve(t *testing.T) {
 	root := map[string]any{
 		"ingress": []any{

@@ -287,13 +287,81 @@ func TestEvaluateRulesListPaths(t *testing.T) {
 		{"indexed value", RuleMatch{AttributePath: "ingress[0].from_port", Value: 22}, true},
 		{"out of range", RuleMatch{AttributePath: "ingress[2].from_port", Value: 22}, false},
 		{"wildcard non-list", RuleMatch{AttributePath: "protocol[*]", Contains: "tcp"}, false},
-		{"secondary path is independent", RuleMatch{AttributePath: "ingress[*].cidr_blocks", Contains: "0.0.0.0/0", AttributePath2: "ingress[*].from_port", Value2: 22}, true},
+		{"same wildcard path correlates elements", RuleMatch{AttributePath: "ingress[*].cidr_blocks", Contains: "0.0.0.0/0", AttributePath2: "ingress[*].from_port", Value2: 22}, false},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			cfg := &Config{Rules: []Rule{{ID: "list-path", Severity: "high", Match: tc.match}}}
 			got := len(EvaluateRules(cfg, &parser.PlanAST{Changes: []parser.ResourceChange{resource}})) == 1
 			if got != tc.want {
 				t.Errorf("matched = %t, want %t", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestEvaluateRulesCorrelatesWildcardIndices(t *testing.T) {
+	rule := Rule{Match: RuleMatch{
+		AttributePath:  "ingress[*].cidr_blocks",
+		Contains:       "0.0.0.0/0",
+		AttributePath2: "ingress[*].from_port",
+		Value2:         22,
+	}}
+	for _, tc := range []struct {
+		name    string
+		ingress []any
+		want    bool
+	}{
+		{
+			name: "different elements do not match",
+			ingress: []any{
+				map[string]any{"from_port": float64(443), "cidr_blocks": []any{"0.0.0.0/0"}},
+				map[string]any{"from_port": float64(22), "cidr_blocks": []any{"10.0.0.0/8"}},
+			},
+			want: false,
+		},
+		{
+			name: "same element matches",
+			ingress: []any{
+				map[string]any{"from_port": float64(443), "cidr_blocks": []any{"10.0.0.0/8"}},
+				map[string]any{"from_port": float64(22), "cidr_blocks": []any{"0.0.0.0/0"}},
+			},
+			want: true,
+		},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			resource := parser.ResourceChange{Action: parser.ActionUpdate, After: map[string]any{"ingress": tc.ingress}}
+			if got := matchRule(rule, resource, ""); got != tc.want {
+				t.Errorf("matchRule = %t, want %t", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestEvaluateRulesWildcardCorrelationExceptions(t *testing.T) {
+	resource := parser.ResourceChange{
+		Type:   "aws_security_group",
+		Action: parser.ActionUpdate,
+		After: map[string]any{
+			"ingress": []any{
+				map[string]any{"from_port": float64(443), "cidr_blocks": []any{"0.0.0.0/0"}},
+				map[string]any{"from_port": float64(22), "cidr_blocks": []any{"10.0.0.0/8"}},
+			},
+			"egress":   []any{map[string]any{"cidr_blocks": []any{"0.0.0.0/0"}}},
+			"protocol": "tcp",
+		},
+	}
+	for _, tc := range []struct {
+		name  string
+		match RuleMatch
+		want  bool
+	}{
+		{"different wildcard prefixes remain independent", RuleMatch{AttributePath: "ingress[*].from_port", Value: 22, AttributePath2: "egress[*].cidr_blocks", Value2: []any{"0.0.0.0/0"}}, true},
+		{"one wildcard remains independent", RuleMatch{AttributePath: "ingress[*].from_port", Value: 22, AttributePath2: "protocol", Value2: "tcp"}, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			got := matchRule(Rule{Match: tc.match}, resource, "")
+			if got != tc.want {
+				t.Errorf("matchRule = %t, want %t", got, tc.want)
 			}
 		})
 	}
