@@ -106,7 +106,7 @@ If a rule matches, the resource's risk tier escalates to the rule's severity; it
 
 Paths use dot-separated segments containing letters, digits, `_`, or `-`. A segment may end in a zero-based list index (`[0]`) or a list wildcard (`[*]`). A path can contain at most one wildcard.
 
-A condition matches when any resolved value matches. `contains` is a substring check for strings and an exact string-membership check for lists. `attribute_path_2` and `value_2` are evaluated independently in this release; they do not require both values to come from the same wildcard-expanded list element. Element correlation is planned for the next release.
+A condition matches when any resolved value matches. `contains` is a substring check for strings and an exact string-membership check for lists.
 
 ```yaml
 rules:
@@ -120,6 +120,25 @@ rules:
 ```
 
 Regex paths are not supported.
+
+### Wildcard correlation
+
+When both `attribute_path` and `attribute_path_2` contain `[*]` with the same prefix before the wildcard, their conditions must match the same list element. Paths with different prefixes, or with a wildcard on only one path, remain independent.
+
+```yaml
+rules:
+  - id: sg-ssh-open-to-world
+    severity: critical
+    description: Public SSH ingress needs review
+    match:
+      resource_type_pattern: aws_security_group
+      attribute_path: ingress[*].cidr_blocks
+      contains: 0.0.0.0/0
+      attribute_path_2: ingress[*].from_port
+      value_2: 22
+```
+
+This rule does not match an ingress list where port 22 and `0.0.0.0/0` occur in different elements.
 
 ## Risk config
 
@@ -144,5 +163,5 @@ Notifications fire when `SLACK_WEBHOOK_URL` (or the custom environment variable)
 - Resource addresses are included in LLM prompts and may reveal internal names. Address-based prompt injection is not mitigated.
 - Automated tests lock Claude CLI `analyze` and `diff` payloads against synthetic attribute values, including the system field; treat the documented v0.1.x field list as version-specific.
 - Claude and OpenAI fail before sending a request when their required API key is absent. Ollama does not require a key.
-- Rule paths allow one `[*]` wildcard but no regex. Wildcard conditions are independent; correlating values from one list element is planned for the next release.
+- Rule paths allow one `[*]` wildcard but no regex. Only paths with the same wildcard prefix correlate; other wildcard conditions remain independent.
 - The built-in AWS behavior is limited to risk-score multipliers; no AWS rule pack is included.

@@ -54,6 +54,11 @@ func matchRule(rule Rule, rc parser.ResourceChange, workspace string) bool {
 			return false
 		}
 	}
+	if m.AttributePath != "" && m.AttributePath2 != "" && m.Value2 != nil {
+		if matched, correlated := matchesCorrelatedAttributes(rc.After, rc.Before, m); correlated {
+			return matched
+		}
+	}
 	if m.AttributePath != "" && !matchesAttribute(rc.After, rc.Before, m.AttributePath, m.Value, m.Contains) {
 		return false
 	}
@@ -73,17 +78,51 @@ func matchesAttribute(after, before map[string]any, rawPath string, expected any
 		values = path.Resolve(before)
 	}
 	for _, value := range values {
-		if contains != "" && containsValue(value, contains) {
-			return true
-		}
-		if contains == "" && expected != nil && valuesEqual(value, expected) {
-			return true
-		}
-		if contains == "" && expected == nil {
+		if attributeValueMatches(value, expected, contains) {
 			return true
 		}
 	}
 	return false
+}
+
+func matchesCorrelatedAttributes(after, before map[string]any, match RuleMatch) (bool, bool) {
+	first, err := ParsePath(match.AttributePath)
+	if err != nil {
+		return false, false
+	}
+	second, err := ParsePath(match.AttributePath2)
+	if err != nil || first.wildcardPrefix == "" || first.wildcardPrefix != second.wildcardPrefix {
+		return false, false
+	}
+
+	firstValues := resolveIndexed(first, after, before)
+	secondValues := resolveIndexed(second, after, before)
+	for _, firstValue := range firstValues {
+		if !attributeValueMatches(firstValue.Value, match.Value, match.Contains) {
+			continue
+		}
+		for _, secondValue := range secondValues {
+			if firstValue.Index == secondValue.Index && attributeValueMatches(secondValue.Value, match.Value2, "") {
+				return true, true
+			}
+		}
+	}
+	return false, true
+}
+
+func resolveIndexed(path Path, after, before map[string]any) []IndexedValue {
+	values := path.ResolveIndexed(after)
+	if len(values) == 0 {
+		values = path.ResolveIndexed(before)
+	}
+	return values
+}
+
+func attributeValueMatches(value, expected any, contains string) bool {
+	if contains != "" {
+		return containsValue(value, contains)
+	}
+	return expected == nil || valuesEqual(value, expected)
 }
 
 func containsValue(value any, expected string) bool {
