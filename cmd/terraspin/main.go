@@ -68,7 +68,7 @@ func main() {
 	flag.StringVar(&format, "format", "text", "output format: text|json|markdown")
 	flag.StringVar(&failOn, "fail-on", "", "exit 1 if risk >= tier: critical|high|medium|low")
 	flag.BoolVar(&noAI, "no-ai", false, "rule-based analysis only, skip LLM call")
-	flag.StringVar(&llmProvider, "llm", "claude", "LLM provider: claude|openai|ollama")
+	flag.StringVar(&llmProvider, "llm", "claude", "LLM provider: bedrock|claude|openai|ollama")
 	flag.StringVar(&llmModel, "model", "", "LLM model name (provider default if empty)")
 	flag.StringVar(&ollamaHost, "ollama-host", "http://localhost:11434", "Ollama host URL")
 	flag.BoolVar(&verbose, "v", false, "show all risk tiers including medium and low")
@@ -203,7 +203,7 @@ Flags (analyze):
   --format string      output format: text|json|markdown (default "text")
   --fail-on string     exit 1 if risk >= tier: critical|high|medium|low
   --no-ai              rule-based analysis only, skip LLM call
-  --llm string         LLM provider: claude|openai|ollama (default "claude")
+  --llm string         LLM provider: bedrock|claude|openai|ollama (default "claude")
   --model string       LLM model name (provider default if empty)
   --ollama-host string Ollama host URL (default "http://localhost:11434")
   -v                   show all risk tiers including medium and low

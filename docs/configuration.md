@@ -8,8 +8,8 @@ Create `.terraspin.yml` in your Terraform workspace. All sections are optional.
 version: 1
 
 llm:
-  provider: claude          # claude | openai | ollama
-  model: claude-sonnet-4-6  # provider model (unless --model is set)
+  provider: claude          # bedrock | claude | openai | ollama
+  model: claude-sonnet-4-6  # provider model (required for bedrock unless --model is set)
   timeout: 30s              # timeout per provider attempt
   max_retries: 2            # additional retry attempts
   fallback_to_rules: true   # use rules after an LLM error
@@ -55,23 +55,34 @@ slack:
 
 The default config-file provider is `claude`. The `--model` flag is applied to the provider request; `llm.model` is used only when explicitly written in the config file. Claude and OpenAI require a non-empty API-key environment variable even when a gateway/proxy endpoint is configured. For an unauthenticated gateway/proxy, set the required variable to a non-secret placeholder value.
 
+Bedrock has no model default: set `--model` or `llm.model` explicitly because model availability depends on the AWS account and region. It uses the AWS SDK default credential chain (environment variables, shared configuration and credentials files, IAM Identity Center, or role credentials) and its configured region (`AWS_REGION`, `AWS_DEFAULT_REGION`, or the selected profile). It does not use a static Terraspin API key. For local endpoint testing, set `AWS_ENDPOINT_URL_BEDROCK_RUNTIME`.
+
+```yaml
+llm:
+  provider: bedrock
+  model: us.anthropic.claude-3-5-sonnet-20240620-v1:0
+  timeout: 30s
+  max_retries: 2
+  fallback_to_rules: true
+```
+
 ### LLM config fields
 
 | Field | Config default | Runtime status |
 | --- | --- | --- |
-| `provider` | `claude` | Applied when an `llm` block exists. |
-| `model` | `claude-sonnet-4-6` | Applied only when explicitly written; `--model` takes precedence. Provider defaults apply otherwise. |
+| `provider` | `claude` | Applied when an `llm` block exists; valid values are `bedrock`, `claude`, `openai`, and `ollama`. |
+| `model` | `claude-sonnet-4-6` | Applied only when explicitly written; `--model` takes precedence. Bedrock requires an explicit value and has no provider default. |
 | `timeout` | `30s` | Applied per attempt; invalid Go durations fail config loading. |
 | `max_retries` | `2` | Applied as additional attempts for network, timeout, HTTP 429, and 5xx errors. |
 | `fallback_to_rules` | `true` | Applied: true falls back after warning; false exits with code 2. |
 
 Retries use capped exponential backoff with jitter and honor `Retry-After` up to 10 seconds. The conservative maximum request time is `(max_retries + 1) × timeout + total retry waits`; using the 10-second wait cap per retry, the defaults are `(2 + 1) × 30s + 2 × 10s = 110s`. A request that succeeds earlier stops retrying sooner.
 
-`terraspin diff` loads `.terraspin.yml` and uses its `llm` settings; `--llm` and `--model` override the configured provider and model. It only requests Claude or OpenAI when the matching API key is non-empty.
+`terraspin diff` loads `.terraspin.yml` and uses its `llm` settings; `--llm` and `--model` override the configured provider and model. It only requests Claude or OpenAI when the matching API key is non-empty. Bedrock requires an explicit model plus AWS region and credentials.
 
 ## Data sent to LLM providers
 
-For v0.1.x, Claude and OpenAI requests include a static system prompt plus the following plan-derived fields in their user prompt. Ollama sends only the user prompt (no system field). They do not include raw `Before` or `After` attribute values today. This is observed behavior, not a long-term payload contract.
+Claude and OpenAI requests include a static system prompt plus the following plan-derived fields in their user prompt. Bedrock sends the same system prompt as a system text block and the user prompt as one user message. Ollama sends only the user prompt (no system field). They do not include raw `Before` or `After` attribute values today. This is observed behavior, not a long-term payload contract.
 
 | Command | Plan-derived fields in the user prompt |
 | --- | --- |
@@ -182,6 +193,6 @@ Notifications fire when `SLACK_WEBHOOK_URL` (or the custom environment variable)
 - LLM retries cover network, timeout, HTTP 429, and 5xx errors only; there is no rate-limit scheduler beyond retry backoff.
 - Resource addresses are included in LLM prompts and may reveal internal names. Address-based prompt injection is not mitigated.
 - Automated tests lock Claude CLI `analyze` and `diff` payloads against synthetic attribute values, including the system field; treat the documented v0.1.x field list as version-specific.
-- Claude and OpenAI fail before sending a request when their required API key is absent. Ollama does not require a key.
+- Claude and OpenAI fail before sending a request when their required API key is absent. Bedrock fails before the invoke request when its model, AWS region, or AWS credentials are unavailable. Ollama does not require a key.
 - Rule paths allow one `[*]` wildcard but no regex. Only paths with the same wildcard prefix correlate; other wildcard conditions remain independent.
 - The built-in AWS policy set currently contains only the `AWS-SG-001` seed rule.

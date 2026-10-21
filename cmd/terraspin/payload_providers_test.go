@@ -56,6 +56,33 @@ func TestCLIOpenAIAndOllamaPayloadsExcludeAttributeValues(t *testing.T) {
 		assertProviderPayloads(t, "ollama", bodies)
 	})
 
+	t.Run("bedrock", func(t *testing.T) {
+		bodies := make(chan []byte, 2)
+		server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path != "/model/bedrock-test-model/converse" || !strings.HasPrefix(r.Header.Get("Authorization"), "AWS4-HMAC-SHA256") {
+				t.Errorf("unexpected Bedrock request: path=%s signed=%t", r.URL.Path, r.Header.Get("Authorization") != "")
+			}
+			body, err := io.ReadAll(r.Body)
+			if err != nil {
+				t.Error(err)
+				return
+			}
+			bodies <- body
+			_, _ = w.Write([]byte(`{"output":{"message":{"role":"assistant","content":[{"text":"{\"summary\":\"LLM narrative\",\"risk_assessment\":\"low\",\"recommendations\":[],\"rollback_strategy\":\"none\"}"}]}}}`))
+		}))
+		defer server.Close()
+		workdir, planA, planB := payloadPlans(t)
+		if err := os.WriteFile(filepath.Join(workdir, ".terraspin.yml"), []byte("version: 1\nllm:\n  provider: bedrock\n  model: bedrock-test-model\n  timeout: 1s\n  max_retries: 0\n  fallback_to_rules: false\n"), 0644); err != nil {
+			t.Fatal(err)
+		}
+		env := withoutEnvironment(os.Environ(), "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "AWS_REGION", "AWS_DEFAULT_REGION", "AWS_ENDPOINT_URL_BEDROCK_RUNTIME", "AWS_CONFIG_FILE", "AWS_SHARED_CREDENTIALS_FILE", "AWS_PROFILE", "AWS_WEB_IDENTITY_TOKEN_FILE", "AWS_ROLE_ARN")
+		env = append(env, "AWS_ACCESS_KEY_ID=payload-test-access-key", "AWS_SECRET_ACCESS_KEY=payload-test-secret-key", "AWS_REGION=us-east-1", "AWS_ENDPOINT_URL_BEDROCK_RUNTIME="+server.URL, "AWS_EC2_METADATA_DISABLED=true", "AWS_CONFIG_FILE="+filepath.Join(workdir, "missing-config"), "AWS_SHARED_CREDENTIALS_FILE="+filepath.Join(workdir, "missing-credentials"))
+		for _, args := range [][]string{{planA}, {"diff", planA, planB}} {
+			runPayloadCommand(t, binary, workdir, env, args)
+		}
+		assertProviderPayloads(t, "bedrock", bodies)
+	})
+
 	t.Run("openai", func(t *testing.T) {
 		proxy := newOpenAIProxy(t)
 		workdir, planA, planB := payloadPlans(t)
@@ -154,18 +181,64 @@ func TestCLIPayloadsSanitizeHostileAddresses(t *testing.T) {
 			if err := json.Unmarshal(body, &payload); err != nil {
 				t.Fatal(err)
 			}
-			if strings.Contains(payload.Prompt, "HOSTILE_LLM_INJECTION") {
-				t.Fatalf("%s payload contains hostile address: %s", command, payload.Prompt)
-			}
-			if !strings.Contains(payload.Prompt, "<invalid-address>") {
-				t.Fatalf("%s payload does not neutralize hostile address: %s", command, payload.Prompt)
-			}
-			if !strings.Contains(payload.Prompt, `aws_s3_bucket.logs["prod-logs"]`) {
-				t.Fatalf("%s payload lost valid address: %s", command, payload.Prompt)
-			}
+			assertHostilePrompt(t, command, payload.Prompt)
 		case <-time.After(5 * time.Second):
 			t.Fatalf("%s payload was not captured", command)
 		}
+	}
+
+	bedrockBodies := make(chan []byte, 2)
+	bedrockServer := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		bedrockBodies <- body
+		_, _ = w.Write([]byte(`{"output":{"message":{"role":"assistant","content":[{"text":"{\"summary\":\"LLM narrative\",\"risk_assessment\":\"low\",\"recommendations\":[],\"rollback_strategy\":\"none\"}"}]}}}`))
+	}))
+	defer bedrockServer.Close()
+	if err := os.WriteFile(filepath.Join(workdir, ".terraspin.yml"), []byte("version: 1\nllm:\n  provider: bedrock\n  model: bedrock-test-model\n  timeout: 1s\n  max_retries: 0\n  fallback_to_rules: false\n"), 0644); err != nil {
+		t.Fatal(err)
+	}
+	env := withoutEnvironment(os.Environ(), "AWS_ACCESS_KEY_ID", "AWS_SECRET_ACCESS_KEY", "AWS_SESSION_TOKEN", "AWS_REGION", "AWS_DEFAULT_REGION", "AWS_ENDPOINT_URL_BEDROCK_RUNTIME", "AWS_CONFIG_FILE", "AWS_SHARED_CREDENTIALS_FILE", "AWS_PROFILE", "AWS_WEB_IDENTITY_TOKEN_FILE", "AWS_ROLE_ARN")
+	env = append(env, "AWS_ACCESS_KEY_ID=payload-test-access-key", "AWS_SECRET_ACCESS_KEY=payload-test-secret-key", "AWS_REGION=us-east-1", "AWS_ENDPOINT_URL_BEDROCK_RUNTIME="+bedrockServer.URL, "AWS_EC2_METADATA_DISABLED=true", "AWS_CONFIG_FILE="+filepath.Join(workdir, "missing-config"), "AWS_SHARED_CREDENTIALS_FILE="+filepath.Join(workdir, "missing-credentials"))
+	for _, args := range [][]string{{hostilePlan}, {"diff", hostilePlan, emptyPlan}} {
+		runPayloadCommand(t, binary, workdir, env, args)
+	}
+	for _, command := range []string{"analyze", "diff"} {
+		select {
+		case body := <-bedrockBodies:
+			var payload struct {
+				Messages []struct {
+					Content []struct {
+						Text string `json:"text"`
+					} `json:"content"`
+				} `json:"messages"`
+			}
+			if err := json.Unmarshal(body, &payload); err != nil {
+				t.Fatal(err)
+			}
+			if len(payload.Messages) != 1 || len(payload.Messages[0].Content) != 1 {
+				t.Fatalf("%s Bedrock messages=%s, want one user text block", command, body)
+			}
+			assertHostilePrompt(t, command, payload.Messages[0].Content[0].Text)
+		case <-time.After(5 * time.Second):
+			t.Fatalf("%s Bedrock payload was not captured", command)
+		}
+	}
+}
+
+func assertHostilePrompt(t *testing.T, command, prompt string) {
+	t.Helper()
+	if strings.Contains(prompt, "HOSTILE_LLM_INJECTION") {
+		t.Fatalf("%s payload contains hostile address: %s", command, prompt)
+	}
+	if !strings.Contains(prompt, "<invalid-address>") {
+		t.Fatalf("%s payload does not neutralize hostile address: %s", command, prompt)
+	}
+	if !strings.Contains(prompt, `aws_s3_bucket.logs["prod-logs"]`) {
+		t.Fatalf("%s payload lost valid address: %s", command, prompt)
 	}
 }
 
@@ -207,11 +280,21 @@ func assertProviderPayloads(t *testing.T, provider string, bodies <-chan []byte)
 			if err := json.Unmarshal(body, &payload); err != nil {
 				t.Fatal(err)
 			}
-			if provider == "ollama" {
+			switch provider {
+			case "ollama":
 				if _, ok := payload["system"]; ok {
 					t.Fatalf("%s %s unexpectedly has a system field", provider, command)
 				}
-			} else {
+			case "bedrock":
+				system, ok := payload["system"].([]any)
+				if !ok || len(system) != 1 || system[0].(map[string]any)["text"] != ai.SystemPrompt {
+					t.Fatalf("%s %s system block changed or missing", provider, command)
+				}
+				messages, ok := payload["messages"].([]any)
+				if !ok || len(messages) != 1 || messages[0].(map[string]any)["role"] != "user" {
+					t.Fatalf("%s %s messages=%v, want one user message", provider, command, payload["messages"])
+				}
+			default:
 				messages, ok := payload["messages"].([]any)
 				if !ok || len(messages) < 2 {
 					t.Fatalf("%s %s messages=%v, want system and user messages", provider, command, payload["messages"])

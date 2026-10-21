@@ -33,12 +33,13 @@ func TestProviderContract(t *testing.T) {
 		keyEnv   string
 		query    func(*testing.T, Provider)
 	}{
+		{"bedrock", false, "", queryContractBedrock},
 		{"claude", true, "ANTHROPIC_API_KEY", queryContractClaude},
 		{"ollama", false, "", queryContractOllama},
 		{"openai", true, "OPENAI_API_KEY", queryContractOpenAI},
 	}
 
-	wantNames := []string{"claude", "ollama", "openai"}
+	wantNames := []string{"bedrock", "claude", "ollama", "openai"}
 	if got := Names(); !reflect.DeepEqual(got, wantNames) {
 		t.Fatalf("Names() = %v, want %v", got, wantNames)
 	}
@@ -54,6 +55,20 @@ func TestProviderContract(t *testing.T) {
 			}
 			tc.query(t, provider)
 		})
+	}
+}
+
+func queryContractBedrock(t *testing.T, provider Provider) {
+	t.Helper()
+	server := newBedrockServer(t, http.StatusOK, func(w http.ResponseWriter, r *http.Request) {
+		assertBedrockRequest(t, r, "bedrock-model", SystemPrompt, "prompt")
+		_, _ = w.Write([]byte(`{"output":{"message":{"role":"assistant","content":[{"text":"bedrock response"}]}},"usage":{"totalTokens":5}}`))
+	})
+	setBedrockEnv(t, server.URL)
+
+	response, err := provider.Query(context.Background(), Request{Model: "bedrock-model", System: SystemPrompt, Prompt: "prompt"})
+	if err != nil || response != (Response{Text: "bedrock response", Tokens: 5}) {
+		t.Fatalf("Query() = %#v, %v", response, err)
 	}
 }
 

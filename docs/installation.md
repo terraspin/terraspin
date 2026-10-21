@@ -36,6 +36,8 @@ The command prints the version and, for release builds, commit/build metadata. A
 | `ANTHROPIC_BASE_URL` | Optional Anthropic-compatible endpoint URL; `ANTHROPIC_API_KEY` must still be non-empty (use a non-secret placeholder for an unauthenticated gateway/proxy) |
 | `CLAUDE_MODEL` | Claude model when `--model` is not set |
 | `OPENAI_API_KEY` | API key for OpenAI when OpenAI is selected |
+| `AWS_REGION` / `AWS_DEFAULT_REGION` | AWS Region for Bedrock when Bedrock is selected |
+| `AWS_ENDPOINT_URL_BEDROCK_RUNTIME` | Optional service-specific Bedrock Runtime endpoint URL for local testing |
 | `GITHUB_TOKEN` | GitHub PR comment integration token |
 | `GITHUB_REPOSITORY` | GitHub repository for PR comments |
 | `GITHUB_REF` / `GITHUB_REF_NAME` | GitHub PR reference used to find the PR number |
@@ -45,7 +47,7 @@ The command prints the version and, for release builds, commit/build metadata. A
 | `CI_MERGE_REQUEST_IID` | GitLab merge-request IID for notes |
 | `SLACK_WEBHOOK_URL` | Slack notification webhook |
 
-Only the variables above are read directly by the executable. `.env.example` contains only these runtime variables; use `--llm`, `--model`, and `--ollama-host` to select providers and models. If you use `direnv`, `.envrc` can source a local `.env` after `direnv allow`.
+Terraspin directly reads the non-AWS variables above. For Bedrock, the AWS SDK reads the default credential chain, including environment credentials, shared configuration and credentials files, IAM Identity Center, and role credentials; Terraspin neither stores nor prints them. Bedrock requires an explicit `--model` or `llm.model`. `.env.example` contains only Terraspin runtime variables; use `--llm`, `--model`, and `--ollama-host` to select providers and models. If you use `direnv`, `.envrc` can source a local `.env` after `direnv allow`.
 
 ## Development shell
 
