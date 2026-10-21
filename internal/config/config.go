@@ -146,6 +146,20 @@ func (c *Config) validate() error {
 		if r.Match.ResourceTypePattern == "" && r.Match.Action == "" {
 			return fmt.Errorf("rules[%q]: at least one match condition required", r.ID)
 		}
+		for _, path := range []struct {
+			name  string
+			value string
+		}{
+			{"attribute_path", r.Match.AttributePath},
+			{"attribute_path_2", r.Match.AttributePath2},
+		} {
+			if path.value == "" {
+				continue
+			}
+			if _, err := ParsePath(path.value); err != nil {
+				return fmt.Errorf("rules[%q]: %s %q: %w", r.ID, path.name, path.value, err)
+			}
+		}
 	}
 	return nil
 }

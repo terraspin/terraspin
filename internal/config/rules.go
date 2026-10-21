@@ -54,59 +54,63 @@ func matchRule(rule Rule, rc parser.ResourceChange, workspace string) bool {
 			return false
 		}
 	}
-	// Attribute path + value/contains match
-	if m.AttributePath != "" {
-		val := getNestedValue(rc.After, m.AttributePath)
-		if val == nil {
-			val = getNestedValue(rc.Before, m.AttributePath)
-		}
-		if val == nil {
-			return false
-		}
-		if m.Contains != "" {
-			s, ok := val.(string)
-			if !ok || !strings.Contains(s, m.Contains) {
-				return false
-			}
-		} else if m.Value != nil {
-			if !valuesEqual(val, m.Value) {
-				return false
-			}
-		}
-		// Secondary attribute match (AND with primary)
-		if m.AttributePath2 != "" && m.Value2 != nil {
-			val2 := getNestedValue(rc.After, m.AttributePath2)
-			if val2 == nil {
-				val2 = getNestedValue(rc.Before, m.AttributePath2)
-			}
-			if val2 == nil || !valuesEqual(val2, m.Value2) {
-				return false
-			}
-		}
+	if m.AttributePath != "" && !matchesAttribute(rc.After, rc.Before, m.AttributePath, m.Value, m.Contains) {
+		return false
+	}
+	if m.AttributePath2 != "" && m.Value2 != nil && !matchesAttribute(rc.After, rc.Before, m.AttributePath2, m.Value2, "") {
+		return false
 	}
 	return true
 }
 
-// getNestedValue walks a dotted path into a nested map.
-// ponytail: flat dot-separated paths, no array indexing.
-func getNestedValue(data map[string]any, path string) any {
-	if data == nil {
+func matchesAttribute(after, before map[string]any, rawPath string, expected any, contains string) bool {
+	path, err := ParsePath(rawPath)
+	if err != nil {
+		return false
+	}
+	values := path.Resolve(after)
+	if len(values) == 0 {
+		values = path.Resolve(before)
+	}
+	for _, value := range values {
+		if contains != "" && containsValue(value, contains) {
+			return true
+		}
+		if contains == "" && expected != nil && valuesEqual(value, expected) {
+			return true
+		}
+		if contains == "" && expected == nil {
+			return true
+		}
+	}
+	return false
+}
+
+func containsValue(value any, expected string) bool {
+	switch value := value.(type) {
+	case string:
+		return strings.Contains(value, expected)
+	case []any:
+		for _, element := range value {
+			if text, ok := element.(string); ok && text == expected {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+// getNestedValue preserves the legacy helper used by existing tests.
+func getNestedValue(data map[string]any, rawPath string) any {
+	path, err := ParsePath(rawPath)
+	if err != nil {
 		return nil
 	}
-	for _, key := range strings.Split(path, ".") {
-		v, ok := data[key]
-		if !ok {
-			return nil
-		}
-		sub, ok := v.(map[string]any)
-		if !ok {
-			return v
-		}
-		data = sub
+	values := path.Resolve(data)
+	if len(values) == 0 {
+		return nil
 	}
-	// ponytail: returns nil if path terminates at a nested map (not a leaf).
-	// Rule attribute paths should always point to leaf values (bool, string, number).
-	return nil
+	return values[0]
 }
 
 // valuesEqual compares two values for rule matching.

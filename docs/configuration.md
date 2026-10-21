@@ -92,15 +92,34 @@ Match conditions:
 | Condition | Example | Description |
 | --- | --- | --- |
 | `resource_type_pattern` | `*_db_instance` | Glob match against resource type |
-| `attribute_path` | `publicly_accessible` | Dot-separated attribute path to inspect |
+| `attribute_path` | `publicly_accessible` | Attribute path to inspect |
 | `value` | `true` | Value to match at `attribute_path` |
 | `attribute_path_2` | `engine` | Optional second dot-separated path; evaluated with the first condition |
 | `value_2` | `postgres` | Value to match at `attribute_path_2` |
-| `contains` | `prod` | Substring required in `attribute_path` value |
+| `contains` | `prod` | Required substring or list member at `attribute_path` |
 | `action` | `delete` | Match by change action |
 | `workspace_pattern` | `prod-*` | Glob match against terraform workspace name |
 
-If a rule matches, the resource's risk tier escalates to the rule's severity; it never downgrades. List indexes, list wildcards, and regex matching are not supported.
+If a rule matches, the resource's risk tier escalates to the rule's severity; it never downgrades.
+
+### Attribute paths
+
+Paths use dot-separated segments containing letters, digits, `_`, or `-`. A segment may end in a zero-based list index (`[0]`) or a list wildcard (`[*]`). A path can contain at most one wildcard.
+
+A condition matches when any resolved value matches. `contains` is a substring check for strings and an exact string-membership check for lists. `attribute_path_2` and `value_2` are evaluated independently in this release; they do not require both values to come from the same wildcard-expanded list element. Element correlation is planned for the next release.
+
+```yaml
+rules:
+  - id: public-ingress
+    severity: critical
+    description: Public ingress needs review
+    match:
+      resource_type_pattern: aws_security_group
+      attribute_path: ingress[*].cidr_blocks
+      contains: 0.0.0.0/0
+```
+
+Regex paths are not supported.
 
 ## Risk config
 
@@ -125,5 +144,5 @@ Notifications fire when `SLACK_WEBHOOK_URL` (or the custom environment variable)
 - Resource addresses are included in LLM prompts and may reveal internal names. Address-based prompt injection is not mitigated.
 - Automated tests lock Claude CLI `analyze` and `diff` payloads against synthetic attribute values, including the system field; treat the documented v0.1.x field list as version-specific.
 - Claude and OpenAI fail before sending a request when their required API key is absent. Ollama does not require a key.
-- The rule engine does not support list indexes, wildcards, or regex matching.
+- Rule paths allow one `[*]` wildcard but no regex. Wildcard conditions are independent; correlating values from one list element is planned for the next release.
 - The built-in AWS behavior is limited to risk-score multipliers; no AWS rule pack is included.
