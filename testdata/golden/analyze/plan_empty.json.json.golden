@@ -11,6 +11,7 @@
     "tier": "low"
   },
   "resource_risks": [],
+  "findings": [],
   "narrative": {
     "provider": "rule-based",
     "summary": "This plan affects no resources infrastructure with overall risk LOW (0/100). 0 changes need immediate review.",

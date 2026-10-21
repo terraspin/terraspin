@@ -30,6 +30,7 @@
       "tier": "high"
     }
   ],
+  "findings": [],
   "blast_radii": {
     "aws_db_instance.replica": {
       "root_address": "aws_db_instance.replica",

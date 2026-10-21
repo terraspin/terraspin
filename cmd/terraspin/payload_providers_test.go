@@ -71,6 +71,49 @@ func TestCLIOpenAIAndOllamaPayloadsExcludeAttributeValues(t *testing.T) {
 	})
 }
 
+func TestCLIPayloadExcludesPolicyFindingText(t *testing.T) {
+	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
+	if err != nil {
+		t.Fatal(err)
+	}
+	binary := filepath.Join(t.TempDir(), "terraspin")
+	build := exec.Command("go", "build", "-o", binary, ".")
+	build.Dir = filepath.Join(repoRoot, "cmd", "terraspin")
+	if output, err := build.CombinedOutput(); err != nil {
+		t.Fatalf("build CLI: %v\n%s", err, output)
+	}
+
+	payloads := make(chan []byte, 1)
+	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		body, err := io.ReadAll(r.Body)
+		if err != nil {
+			t.Error(err)
+			return
+		}
+		payloads <- body
+		_, _ = w.Write([]byte(`{"response":"{\\"summary\\":\\"LLM narrative\\",\\"risk_assessment\\":\\"high\\",\\"recommendations\\":[],\\"rollback_strategy\\":\\"none\\"}"}`))
+	}))
+	defer server.Close()
+
+	workdir := t.TempDir()
+	const untrusted = "HOSTILE_POLICY_FINDING_TEXT"
+	config := "version: 1\nbuiltin_rules: false\nrules:\n  - id: CUSTOM-SG-001\n    severity: high\n    description: " + untrusted + "\n    match:\n      resource_type_pattern: aws_security_group\n      action: create\n"
+	if err := os.WriteFile(filepath.Join(workdir, ".terraspin.yml"), []byte(config), 0644); err != nil {
+		t.Fatal(err)
+	}
+	plan := filepath.Join(repoRoot, "testdata", "aws", "sg_open_ssh_world", "plan.json")
+	runPayloadCommand(t, binary, workdir, os.Environ(), []string{"--llm", "ollama", "--ollama-host", server.URL, plan})
+
+	select {
+	case body := <-payloads:
+		if strings.Contains(string(body), untrusted) {
+			t.Fatalf("LLM payload contains policy finding text: %s", body)
+		}
+	case <-time.After(5 * time.Second):
+		t.Fatal("LLM payload was not captured")
+	}
+}
+
 func TestCLIPayloadsSanitizeHostileAddresses(t *testing.T) {
 	repoRoot, err := filepath.Abs(filepath.Join("..", ".."))
 	if err != nil {

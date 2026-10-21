@@ -49,6 +49,7 @@
       "tier": "high"
     }
   ],
+  "findings": [],
   "blast_radii": {
     "aws_instance.gateway": {
       "root_address": "aws_instance.gateway",

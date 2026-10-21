@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/mark3labs/mcp-go/mcp"
+	server "github.com/mark3labs/mcp-go/server"
 	"github.com/terraspin/terraspin/internal/analyzer"
 )
 
@@ -409,5 +410,31 @@ func TestHandleSuggestRollback_includesFailurePoint(t *testing.T) {
 	}
 	if !strings.Contains(text, "aws_db_instance.p") {
 		t.Error("missing failure point resource")
+	}
+}
+
+func TestPolicyFindingsAppearInMCPResults(t *testing.T) {
+	planJSON := `{"format_version":"1.2","resource_changes":[{"address":"aws_security_group.open_ssh_world","mode":"managed","type":"aws_security_group","name":"open_ssh_world","provider_name":"aws","change":{"actions":["create"],"before":null,"after":{"ingress":[{"cidr_blocks":["0.0.0.0/0"],"from_port":22}]}}}]}`
+	for name, handler := range map[string]server.ToolHandlerFunc{
+		"analyze_plan":     handleAnalyzePlan,
+		"get_risk_summary": handleGetRiskSummary,
+		"explain_change":   handleExplainChange,
+	} {
+		t.Run(name, func(t *testing.T) {
+			req := mcp.CallToolRequest{}
+			args := map[string]any{"plan_json": planJSON}
+			if name == "explain_change" {
+				args["resource_address"] = "aws_security_group.open_ssh_world"
+			}
+			req.Params.Arguments = args
+			result, err := handler(context.Background(), req)
+			if err != nil {
+				t.Fatal(err)
+			}
+			text := result.Content[0].(mcp.TextContent).Text
+			if !strings.Contains(text, "AWS-SG-001") {
+				t.Fatalf("MCP result missing policy finding: %s", text)
+			}
+		})
 	}
 }

@@ -37,6 +37,7 @@
       "tier": "critical"
     }
   ],
+  "findings": [],
   "blast_radii": {
     "aws_db_instance.primary": {
       "root_address": "aws_db_instance.primary",
