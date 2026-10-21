@@ -32,6 +32,10 @@ terraform plan -json | terraspin [flags]
 | `--config`       | `.terraspin.yml` | Path to config file                                  |
 | `--post-comment` | `false`  | Post analysis as GitHub PR / GitLab MR comment              |
 
+### Policy findings
+
+Matching policy rules are shown after the risk summary in text output, in a `Policy Findings` table in Markdown, and in the JSON `findings` array. Each finding includes its severity, rule ID, resource address, message, optional remediation, and source (`builtin` or `custom`). JSON always includes `findings`, using `[]` when nothing matches. The `analyze_plan` and `get_risk_summary` MCP tools include all findings; `explain_change` includes findings for its selected resource.
+
 ### Exit codes
 
 | Code | Meaning                             |

@@ -32,6 +32,17 @@ func FormatText(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[string
 	fmt.Fprintf(&b, "  %d to create  ·  %d to update  ·  %d to delete  ·  %d to replace\n\n",
 		counts["create"], counts["update"], counts["delete"], counts["replace"])
 
+	if len(score.Findings) > 0 {
+		fmt.Fprintf(&b, "──── Policy findings ─────────────────────────────────────────\n\n")
+		for _, finding := range score.Findings {
+			fmt.Fprintf(&b, "  [%s] %s %s: %s\n", strings.ToUpper(finding.Severity), finding.RuleID, finding.Address, finding.Message)
+			if finding.Remediation != "" {
+				fmt.Fprintf(&b, "  Fix: %s\n", finding.Remediation)
+			}
+		}
+		fmt.Fprintln(&b)
+	}
+
 	// Critical/high changes
 	hasCritical := false
 	for _, rs := range score.ResourceScores {
@@ -143,26 +154,30 @@ func FormatText(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[string
 	return b.String()
 }
 
-
-
 // ---------------------------------------------------------------------------
 // JSON format
 // ---------------------------------------------------------------------------
 
 // FormatJSON renders the analysis as structured JSON.
 func FormatJSON(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[string]*analyzer.BlastRadius, narr *ai.Narrative) (string, error) {
+	findings := score.Findings
+	if findings == nil {
+		findings = []analyzer.Finding{}
+	}
 	out := struct {
-		TerraformVersion string                     `json:"terraform_version"`
-		ResourceCounts   map[string]int             `json:"resource_counts"`
-		OverallRisk      analyzer.RiskScore         `json:"overall_risk"`
-		ResourceRisks    []analyzer.ResourceRiskScore `json:"resource_risks"`
+		TerraformVersion string                           `json:"terraform_version"`
+		ResourceCounts   map[string]int                   `json:"resource_counts"`
+		OverallRisk      analyzer.RiskScore               `json:"overall_risk"`
+		ResourceRisks    []analyzer.ResourceRiskScore     `json:"resource_risks"`
+		Findings         []analyzer.Finding               `json:"findings"`
 		BlastRadii       map[string]*analyzer.BlastRadius `json:"blast_radii,omitempty"`
-		Narrative        *ai.Narrative              `json:"narrative,omitempty"`
+		Narrative        *ai.Narrative                    `json:"narrative,omitempty"`
 	}{
 		TerraformVersion: ast.TerraformVersion,
 		ResourceCounts:   ast.CountByAction(),
 		OverallRisk:      score.Overall,
 		ResourceRisks:    score.ResourceScores,
+		Findings:         findings,
 		BlastRadii:       blast,
 		Narrative:        narr,
 	}
@@ -191,6 +206,13 @@ func FormatMarkdown(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[st
 	for _, action := range []string{"create", "update", "delete", "replace"} {
 		if c := counts[action]; c > 0 {
 			fmt.Fprintf(&b, "| %s | %d |\n", action, c)
+		}
+	}
+
+	if len(score.Findings) > 0 {
+		fmt.Fprintf(&b, "\n### Policy Findings\n\n| Severity | Rule | Resource | Message | Fix |\n|----------|------|----------|---------|-----|\n")
+		for _, finding := range score.Findings {
+			fmt.Fprintf(&b, "| %s | %s | %s | %s | %s |\n", strings.ToUpper(finding.Severity), markdownCell(finding.RuleID), markdownCell(finding.Address), markdownCell(finding.Message), markdownCell(finding.Remediation))
 		}
 	}
 
@@ -279,4 +301,6 @@ func FormatMarkdown(ast *parser.PlanAST, score *analyzer.PlanScore, blast map[st
 // Helpers
 // ---------------------------------------------------------------------------
 
-
+func markdownCell(value string) string {
+	return strings.NewReplacer("|", "\\|", "\n", " ", "\r", " ").Replace(value)
+}

@@ -36,6 +36,12 @@ func TestCLIGolden(t *testing.T) {
 			})
 		}
 	}
+	sshFixture := filepath.Join(repoRoot, "testdata", "aws", "sg_open_ssh_world", "plan.json")
+	for _, format := range []string{"text", "json", "markdown"} {
+		t.Run("analyze/aws-sg_open_ssh_world/"+format, func(t *testing.T) {
+			goldenOutput(t, repoRoot, filepath.Join("analyze", "aws-sg_open_ssh_world."+format), runGoldenCLI(t, binary, "--no-ai", "--format", format, sshFixture))
+		})
+	}
 
 	for _, format := range []string{"text", "json", "markdown"} {
 		t.Run("diff/sensitive-collections/"+format, func(t *testing.T) {

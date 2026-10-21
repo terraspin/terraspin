@@ -96,6 +96,7 @@
       "tier": "low"
     }
   ],
+  "findings": [],
   "blast_radii": {
     "aws_db_instance.alpha": {
       "root_address": "aws_db_instance.alpha",

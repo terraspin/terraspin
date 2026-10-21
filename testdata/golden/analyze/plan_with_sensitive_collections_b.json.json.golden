@@ -18,6 +18,7 @@
       "tier": "low"
     }
   ],
+  "findings": [],
   "blast_radii": {
     "example_sensitive_resource.test": {
       "root_address": "example_sensitive_resource.test",

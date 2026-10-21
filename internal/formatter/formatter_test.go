@@ -116,9 +116,9 @@ func TestFormatJSON_validStructure(t *testing.T) {
 		t.Fatal("output is not valid JSON")
 	}
 	var parsed struct {
-		TerraformVersion string           `json:"terraform_version"`
+		TerraformVersion string             `json:"terraform_version"`
 		OverallRisk      analyzer.RiskScore `json:"overall_risk"`
-		ResourceRisks    []json.RawMessage `json:"resource_risks"`
+		ResourceRisks    []json.RawMessage  `json:"resource_risks"`
 	}
 	if err := json.Unmarshal([]byte(output), &parsed); err != nil {
 		t.Fatal(err)
@@ -222,5 +222,38 @@ func TestFormatText_showsHeaderAndRisk(t *testing.T) {
 	}
 	if !strings.Contains(output, "1 to create") || !strings.Contains(output, "1 to delete") {
 		t.Error("missing resource action counts")
+	}
+}
+
+func TestFormattersShowPolicyFindings(t *testing.T) {
+	ast := &parser.PlanAST{TerraformVersion: "1.7.2"}
+	score := &analyzer.PlanScore{
+		Overall:  analyzer.RiskScore{Score: 85, Tier: analyzer.TierCritical},
+		Counts:   map[analyzer.RiskTier]int{analyzer.TierCritical: 1},
+		Findings: []analyzer.Finding{{RuleID: "AWS-SG-001", Severity: "critical", Address: "aws_security_group.open_ssh_world", Message: "SSH is open to the internet.", Remediation: "Restrict SSH access."}},
+	}
+
+	text := FormatText(ast, score, nil, nil, false)
+	if !strings.Contains(text, "Policy findings") || !strings.Contains(text, "[CRITICAL] AWS-SG-001 aws_security_group.open_ssh_world: SSH is open to the internet.") || !strings.Contains(text, "Fix: Restrict SSH access.") {
+		t.Fatalf("text output missing finding: %s", text)
+	}
+
+	markdown := FormatMarkdown(ast, score, nil, nil)
+	if !strings.Contains(markdown, "### Policy Findings") || !strings.Contains(markdown, "| Severity | Rule | Resource | Message | Fix |") || !strings.Contains(markdown, "AWS-SG-001") {
+		t.Fatalf("markdown output missing finding: %s", markdown)
+	}
+
+	jsonOutput, err := FormatJSON(ast, score, nil, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	var parsed struct {
+		Findings []analyzer.Finding `json:"findings"`
+	}
+	if err := json.Unmarshal([]byte(jsonOutput), &parsed); err != nil {
+		t.Fatal(err)
+	}
+	if len(parsed.Findings) != 1 || parsed.Findings[0].RuleID != "AWS-SG-001" {
+		t.Fatalf("JSON findings = %#v", parsed.Findings)
 	}
 }
