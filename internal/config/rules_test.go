@@ -265,6 +265,46 @@ func TestGetNestedValue_nested(t *testing.T) {
 	}
 }
 
+func TestRuleCharacterizationLegacyFlatPathSemantics(t *testing.T) {
+	resource := parser.ResourceChange{
+		Type:   "aws_example",
+		Action: parser.ActionUpdate,
+		After: map[string]any{
+			"settings": map[string]any{"port": float64(22), "label": "production"},
+			"engine":   "postgres",
+		},
+		Before: map[string]any{"settings": map[string]any{"port": float64(5432)}},
+	}
+
+	for _, tc := range []struct {
+		name  string
+		match RuleMatch
+		want  bool
+	}{
+		{"nested value compares YAML integer to JSON number", RuleMatch{AttributePath: "settings.port", Value: 22}, true},
+		{"contains is substring", RuleMatch{AttributePath: "settings.label", Contains: "prod"}, true},
+		{"secondary path is AND", RuleMatch{AttributePath: "settings.port", Value: 22, AttributePath2: "engine", Value2: "mysql"}, false},
+		{"after takes precedence over before", RuleMatch{AttributePath: "settings.port", Value: 5432}, false},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			if got := matchRule(Rule{Match: tc.match}, resource, ""); got != tc.want {
+				t.Errorf("matchRule = %t, want %t", got, tc.want)
+			}
+		})
+	}
+}
+
+func TestRuleCharacterizationLegacyFallsBackToBefore(t *testing.T) {
+	resource := parser.ResourceChange{
+		Action: parser.ActionUpdate,
+		After:  map[string]any{},
+		Before: map[string]any{"settings": map[string]any{"port": float64(5432)}},
+	}
+	if !matchRule(Rule{Match: RuleMatch{AttributePath: "settings.port", Value: 5432}}, resource, "") {
+		t.Fatal("expected before value to match when after path is absent")
+	}
+}
+
 func TestValuesEqual(t *testing.T) {
 	tests := []struct {
 		a, b any
