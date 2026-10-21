@@ -3,6 +3,7 @@ package analyzer
 
 import (
 	"math"
+	"sort"
 	"strings"
 
 	"github.com/terraspin/terraspin/internal/config"
@@ -27,10 +28,10 @@ type RiskScore struct {
 
 // ResourceRiskScore holds per-resource risk.
 type ResourceRiskScore struct {
-	Address string     `json:"address"`
+	Address string              `json:"address"`
 	Action  parser.ChangeAction `json:"action"`
-	Score   float64    `json:"score"`
-	Tier    RiskTier   `json:"tier"`
+	Score   float64             `json:"score"`
+	Tier    RiskTier            `json:"tier"`
 }
 
 // PlanScore is the full scoring result for a plan.
@@ -38,6 +39,17 @@ type PlanScore struct {
 	Overall        RiskScore           `json:"overall"`
 	ResourceScores []ResourceRiskScore `json:"resource_scores"`
 	Counts         map[RiskTier]int    `json:"counts"`
+	Findings       []Finding           `json:"findings"`
+}
+
+// Finding identifies the policy rule that matched a resource change.
+type Finding struct {
+	RuleID      string `json:"rule_id"`
+	Severity    string `json:"severity"`
+	Address     string `json:"address"`
+	Message     string `json:"message"`
+	Remediation string `json:"remediation,omitempty"`
+	Source      string `json:"source"`
 }
 
 // baseScore returns the base risk score for a change action.
@@ -205,6 +217,7 @@ func ScorePlan(ast *parser.PlanAST) *PlanScore {
 		Overall:        RiskScore{Score: topScore, Tier: tierFromScore(topScore)},
 		ResourceScores: scores,
 		Counts:         counts,
+		Findings:       []Finding{},
 	}
 }
 
@@ -212,19 +225,43 @@ func ScorePlan(ast *parser.PlanAST) *PlanScore {
 // the computed risk tier. Modifies ps in-place.
 func ApplyCustomRules(ps *PlanScore, ruleMatches []config.RuleMatchResult) {
 	if len(ruleMatches) == 0 {
+		ps.Findings = []Finding{}
 		return
 	}
-	// Build map: address → highest severity from matched rules
+	findings := make(map[string]Finding, len(ruleMatches))
+	// Build map: address → highest severity from matched rules.
 	addrEscalation := make(map[string]RiskTier)
 	for _, m := range ruleMatches {
-		rt := TierFromName(m.Severity)
-		if rt == "" {
-			continue
+		key := m.Address + "\x00" + m.RuleID
+		if _, exists := findings[key]; !exists {
+			findings[key] = Finding{
+				RuleID:      m.RuleID,
+				Severity:    m.Severity,
+				Address:     m.Address,
+				Message:     m.Description,
+				Remediation: m.Remediation,
+				Source:      m.Source,
+			}
 		}
-		if existing, ok := addrEscalation[m.Address]; !ok || TierWeight(rt) > TierWeight(existing) {
+		rt := TierFromName(m.Severity)
+		if existing, ok := addrEscalation[m.Address]; rt != "" && (!ok || TierWeight(rt) > TierWeight(existing)) {
 			addrEscalation[m.Address] = rt
 		}
 	}
+	ps.Findings = make([]Finding, 0, len(findings))
+	for _, finding := range findings {
+		ps.Findings = append(ps.Findings, finding)
+	}
+	sort.Slice(ps.Findings, func(i, j int) bool {
+		left, right := ps.Findings[i], ps.Findings[j]
+		if leftWeight, rightWeight := TierWeight(TierFromName(left.Severity)), TierWeight(TierFromName(right.Severity)); leftWeight != rightWeight {
+			return leftWeight > rightWeight
+		}
+		if left.Address != right.Address {
+			return left.Address < right.Address
+		}
+		return left.RuleID < right.RuleID
+	})
 
 	// Apply escalations
 	for i := range ps.ResourceScores {

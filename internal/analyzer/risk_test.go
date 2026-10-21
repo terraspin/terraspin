@@ -1,6 +1,7 @@
 package analyzer
 
 import (
+	"reflect"
 	"testing"
 
 	"github.com/terraspin/terraspin/internal/config"
@@ -165,5 +166,23 @@ func TestApplyCustomRules_highestSeverityWins(t *testing.T) {
 	ApplyCustomRules(ps, matches)
 	if ps.ResourceScores[0].Tier != TierCritical {
 		t.Errorf("expected critical, got %s", ps.ResourceScores[0].Tier)
+	}
+}
+
+func TestApplyCustomRulesAddsSortedDeduplicatedFindings(t *testing.T) {
+	ps := &PlanScore{}
+	ApplyCustomRules(ps, []config.RuleMatchResult{
+		{RuleID: "HIGH-Z", Severity: "high", Address: "z", Description: "high", Source: "custom"},
+		{RuleID: "CRITICAL-Z", Severity: "critical", Address: "z", Description: "critical z", Source: "builtin"},
+		{RuleID: "CRITICAL-A", Severity: "critical", Address: "a", Description: "critical a", Remediation: "fix it", Source: "custom"},
+		{RuleID: "CRITICAL-A", Severity: "critical", Address: "a", Description: "duplicate", Source: "custom"},
+	})
+
+	if got, want := ps.Findings, []Finding{
+		{RuleID: "CRITICAL-A", Severity: "critical", Address: "a", Message: "critical a", Remediation: "fix it", Source: "custom"},
+		{RuleID: "CRITICAL-Z", Severity: "critical", Address: "z", Message: "critical z", Source: "builtin"},
+		{RuleID: "HIGH-Z", Severity: "high", Address: "z", Message: "high", Source: "custom"},
+	}; !reflect.DeepEqual(got, want) {
+		t.Fatalf("findings = %#v, want %#v", got, want)
 	}
 }
