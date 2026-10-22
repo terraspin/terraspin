@@ -71,6 +71,34 @@ ANTHROPIC_API_KEY="..." terraspin --llm claude plan.json
 
 → [Getting started](docs/getting-started.md)
 
+## AWS
+
+Terraspin evaluates built-in checks for AWS security groups, RDS, EBS, KMS, and EKS. See [the AWS rule catalog](docs/aws-rules.md) for the checks, remediations, and limitations.
+
+```bash
+terraform plan -out=plan.tfplan
+terraform show -json plan.tfplan > plan.json
+terraspin --no-ai plan.json
+```
+
+A public SSH rule produces this text output:
+
+```text
+Overall Risk  CRITICAL (score: 85)
+
+──── Policy findings ─────────────────────────────────────────
+
+  [CRITICAL] AWS-SG-001 aws_security_group.open_ssh_world: SSH is open to the internet.
+```
+
+Disable an individual built-in rule in `.terraspin.yml`:
+
+```yaml
+disable_rules: [AWS-SG-001]
+```
+
+For an AWS-hosted LLM narrative, use `--llm bedrock --model <model-id>` with your AWS credential chain. [Bedrock setup and rule configuration](docs/configuration.md#analyze-llm-behavior)
+
 ## Documentation
 
 | Document                                       | Content                                            |
