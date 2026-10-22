@@ -10,17 +10,29 @@ generated_scenarios=(
   eks_private
   eks_public_endpoint
   eks_public_restricted
+  iam_policy_heredoc
+  iam_scoped
+  iam_trust_any_principal
+  iam_trust_aws_wildcard
+  iam_trust_service
   iam_wildcard
   kms_rotation_off
   kms_rotation_on
   rds_defaults
   rds_insecure
   rds_secure
+  s3_policy_restricted
+  s3_private
   s3_public
   sg_all_traffic_world
   sg_clean
   sg_open_rdp_world
   sg_open_ssh_ipv6
+  sg_ingress_rule_all_world
+  sg_ingress_rule_clean
+  sg_ingress_rule_rdp_world
+  sg_ingress_rule_ssh_ipv6
+  sg_ingress_rule_ssh_world
   sg_open_ssh_world
   sg_ssh_internal
 )

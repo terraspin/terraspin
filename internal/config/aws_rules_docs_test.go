@@ -18,7 +18,7 @@ func TestAWSRulesDocumentationMatchesBuiltinRules(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	matches := regexp.MustCompile(`(?m)^\| (AWS-[A-Z]+-\d{3}) \|`).FindAllStringSubmatch(string(data), -1)
+	matches := regexp.MustCompile(`(?m)^\| (AWS-[A-Z0-9]+-\d{3}) \|`).FindAllStringSubmatch(string(data), -1)
 	documented := make([]string, 0, len(matches))
 	for _, match := range matches {
 		documented = append(documented, match[1])

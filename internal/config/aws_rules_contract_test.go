@@ -15,7 +15,8 @@ func TestBuiltinAWSRuleContract(t *testing.T) {
 	wantIDs := []string{
 		"AWS-EBS-001", "AWS-EKS-001", "AWS-KMS-001",
 		"AWS-RDS-001", "AWS-RDS-002", "AWS-RDS-003",
-		"AWS-SG-001", "AWS-SG-002", "AWS-SG-003", "AWS-SG-004",
+		"AWS-SG-001", "AWS-SG-002", "AWS-SG-003", "AWS-SG-004", "AWS-SG-005", "AWS-SG-006", "AWS-SG-007", "AWS-SG-008",
+		"AWS-S3-001", "AWS-S3-002", "AWS-IAM-001", "AWS-IAM-002", "AWS-IAM-003",
 	}
 	rules, err := builtinRules()
 	if err != nil {
@@ -44,6 +45,7 @@ func TestBuiltinAWSRuleContract(t *testing.T) {
 		}
 	}
 	sort.Strings(gotIDs)
+	sort.Strings(wantIDs)
 	if !reflect.DeepEqual(gotIDs, wantIDs) {
 		t.Fatalf("built-in IDs=%v, want %v", gotIDs, wantIDs)
 	}
