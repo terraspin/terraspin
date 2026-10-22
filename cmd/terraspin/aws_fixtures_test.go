@@ -20,10 +20,13 @@ func TestAWSFixturesParse(t *testing.T) {
 		t.Fatal(err)
 	}
 	wantChanges := map[string]int{
-		"ebs_unencrypted": 1, "eks_public_endpoint": 1, "iam_wildcard": 2,
-		"kms_rotation_off": 1, "rds_insecure": 1, "rds_replace": 1,
-		"s3_destroy": 3, "s3_public": 3, "sg_open_ssh_world": 1,
-		"sg_ssh_internal": 1,
+		"ebs_encrypted": 1, "ebs_unencrypted": 1,
+		"eks_private": 1, "eks_public_endpoint": 1, "eks_public_restricted": 1,
+		"iam_wildcard": 2, "kms_rotation_off": 1, "kms_rotation_on": 1,
+		"rds_defaults": 1, "rds_insecure": 1, "rds_replace": 1, "rds_secure": 1,
+		"s3_destroy": 3, "s3_public": 3,
+		"sg_all_traffic_world": 1, "sg_clean": 1, "sg_open_rdp_world": 1,
+		"sg_open_ssh_ipv6": 1, "sg_open_ssh_world": 1, "sg_ssh_internal": 1,
 	}
 	if len(fixtures) != len(wantChanges) {
 		t.Fatalf("fixtures = %d, want %d", len(fixtures), len(wantChanges))

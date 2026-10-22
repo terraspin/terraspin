@@ -1,0 +1,146 @@
+{
+  "applyable": true,
+  "complete": true,
+  "configuration": {
+    "provider_config": {
+      "aws": {
+        "expressions": {
+          "access_key": {
+            "constant_value": "test"
+          },
+          "region": {
+            "constant_value": "us-east-1"
+          },
+          "secret_key": {
+            "constant_value": "test"
+          },
+          "skip_credentials_validation": {
+            "constant_value": true
+          },
+          "skip_metadata_api_check": {
+            "constant_value": true
+          },
+          "skip_region_validation": {
+            "constant_value": true
+          },
+          "skip_requesting_account_id": {
+            "constant_value": true
+          }
+        },
+        "full_name": "registry.terraform.io/hashicorp/aws",
+        "name": "aws",
+        "version_constraint": "6.69.1"
+      }
+    },
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_kms_key.rotation_on",
+          "expressions": {
+            "deletion_window_in_days": {
+              "constant_value": 7
+            },
+            "description": {
+              "constant_value": "SYNTH KMS key with rotation enabled"
+            },
+            "enable_key_rotation": {
+              "constant_value": true
+            }
+          },
+          "mode": "managed",
+          "name": "rotation_on",
+          "provider_config_key": "aws",
+          "schema_version": 0,
+          "type": "aws_kms_key"
+        }
+      ]
+    }
+  },
+  "errored": false,
+  "format_version": "1.2",
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_kms_key.rotation_on",
+          "identity": {
+            "account_id": null,
+            "id": null,
+            "region": null
+          },
+          "identity_schema_version": 0,
+          "mode": "managed",
+          "name": "rotation_on",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "schema_version": 0,
+          "sensitive_values": {
+            "tags_all": {}
+          },
+          "type": "aws_kms_key",
+          "values": {
+            "bypass_policy_lockout_safety_check": false,
+            "custom_key_store_id": null,
+            "customer_master_key_spec": "SYMMETRIC_DEFAULT",
+            "deletion_window_in_days": 7,
+            "description": "SYNTH KMS key with rotation enabled",
+            "enable_key_rotation": true,
+            "is_enabled": true,
+            "key_usage": "ENCRYPT_DECRYPT",
+            "region": "us-east-1",
+            "tags": null,
+            "timeouts": null,
+            "xks_key_id": null
+          }
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "aws_kms_key.rotation_on",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "bypass_policy_lockout_safety_check": false,
+          "custom_key_store_id": null,
+          "customer_master_key_spec": "SYMMETRIC_DEFAULT",
+          "deletion_window_in_days": 7,
+          "description": "SYNTH KMS key with rotation enabled",
+          "enable_key_rotation": true,
+          "is_enabled": true,
+          "key_usage": "ENCRYPT_DECRYPT",
+          "region": "us-east-1",
+          "tags": null,
+          "timeouts": null,
+          "xks_key_id": null
+        },
+        "after_identity": {
+          "account_id": null,
+          "id": null,
+          "region": null
+        },
+        "after_sensitive": {
+          "tags_all": {}
+        },
+        "after_unknown": {
+          "arn": true,
+          "id": true,
+          "key_id": true,
+          "multi_region": true,
+          "policy": true,
+          "rotation_period_in_days": true,
+          "tags_all": true
+        },
+        "before": null,
+        "before_sensitive": false
+      },
+      "mode": "managed",
+      "name": "rotation_on",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "type": "aws_kms_key"
+    }
+  ],
+  "terraform_version": "1.16.5"
+}

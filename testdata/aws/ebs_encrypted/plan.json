@@ -1,0 +1,144 @@
+{
+  "applyable": true,
+  "complete": true,
+  "configuration": {
+    "provider_config": {
+      "aws": {
+        "expressions": {
+          "access_key": {
+            "constant_value": "test"
+          },
+          "region": {
+            "constant_value": "us-east-1"
+          },
+          "secret_key": {
+            "constant_value": "test"
+          },
+          "skip_credentials_validation": {
+            "constant_value": true
+          },
+          "skip_metadata_api_check": {
+            "constant_value": true
+          },
+          "skip_region_validation": {
+            "constant_value": true
+          },
+          "skip_requesting_account_id": {
+            "constant_value": true
+          }
+        },
+        "full_name": "registry.terraform.io/hashicorp/aws",
+        "name": "aws",
+        "version_constraint": "6.69.1"
+      }
+    },
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_ebs_volume.encrypted",
+          "expressions": {
+            "availability_zone": {
+              "constant_value": "us-east-1a"
+            },
+            "encrypted": {
+              "constant_value": true
+            },
+            "size": {
+              "constant_value": 20
+            }
+          },
+          "mode": "managed",
+          "name": "encrypted",
+          "provider_config_key": "aws",
+          "schema_version": 0,
+          "type": "aws_ebs_volume"
+        }
+      ]
+    }
+  },
+  "errored": false,
+  "format_version": "1.2",
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_ebs_volume.encrypted",
+          "identity": {
+            "account_id": null,
+            "id": null,
+            "region": null
+          },
+          "identity_schema_version": 0,
+          "mode": "managed",
+          "name": "encrypted",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "schema_version": 0,
+          "sensitive_values": {
+            "tags_all": {}
+          },
+          "type": "aws_ebs_volume",
+          "values": {
+            "availability_zone": "us-east-1a",
+            "encrypted": true,
+            "final_snapshot": false,
+            "multi_attach_enabled": null,
+            "outpost_arn": null,
+            "region": "us-east-1",
+            "size": 20,
+            "tags": null,
+            "timeouts": null,
+            "volume_initialization_rate": null
+          }
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "aws_ebs_volume.encrypted",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "availability_zone": "us-east-1a",
+          "encrypted": true,
+          "final_snapshot": false,
+          "multi_attach_enabled": null,
+          "outpost_arn": null,
+          "region": "us-east-1",
+          "size": 20,
+          "tags": null,
+          "timeouts": null,
+          "volume_initialization_rate": null
+        },
+        "after_identity": {
+          "account_id": null,
+          "id": null,
+          "region": null
+        },
+        "after_sensitive": {
+          "tags_all": {}
+        },
+        "after_unknown": {
+          "arn": true,
+          "create_time": true,
+          "id": true,
+          "iops": true,
+          "kms_key_id": true,
+          "snapshot_id": true,
+          "tags_all": true,
+          "throughput": true,
+          "type": true
+        },
+        "before": null,
+        "before_sensitive": false
+      },
+      "mode": "managed",
+      "name": "encrypted",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "type": "aws_ebs_volume"
+    }
+  ],
+  "terraform_version": "1.16.5"
+}

@@ -95,7 +95,14 @@ Values Terraform marks sensitive are redacted before analysis. Values not marked
 
 Built-in rules are active by default, including without a `.terraspin.yml` file. Set `builtin_rules: false` to disable every built-in rule, or list IDs in `disable_rules` to disable individual rules. Unknown IDs fail validation and the error lists available built-in IDs. A custom rule cannot reuse a built-in ID.
 
-The current seed rule is `AWS-SG-001`: it reports critical public SSH ingress on `aws_security_group` resources when `ingress[*].cidr_blocks` contains `0.0.0.0/0` and the matching ingress element has port 22. The rule includes a short remediation to restrict SSH to trusted CIDR ranges.
+Built-in AWS rules cover security groups, RDS, EBS, KMS, and EKS. Disable individual rules by ID while leaving the remaining embedded rules active:
+
+```yaml
+disable_rules:
+  - AWS-SG-002
+```
+
+`disable_rules` IDs must exist in the embedded rule pack; unknown IDs fail validation. See [Built-in AWS rules](aws-rules.md) for each check, remediation, and limitation.
 
 ## Rules
 

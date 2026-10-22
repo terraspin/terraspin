@@ -1,0 +1,294 @@
+{
+  "applyable": true,
+  "complete": true,
+  "configuration": {
+    "provider_config": {
+      "aws": {
+        "expressions": {
+          "access_key": {
+            "constant_value": "test"
+          },
+          "region": {
+            "constant_value": "us-east-1"
+          },
+          "secret_key": {
+            "constant_value": "test"
+          },
+          "skip_credentials_validation": {
+            "constant_value": true
+          },
+          "skip_metadata_api_check": {
+            "constant_value": true
+          },
+          "skip_region_validation": {
+            "constant_value": true
+          },
+          "skip_requesting_account_id": {
+            "constant_value": true
+          }
+        },
+        "full_name": "registry.terraform.io/hashicorp/aws",
+        "name": "aws",
+        "version_constraint": "6.69.1"
+      }
+    },
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_db_instance.defaults",
+          "expressions": {
+            "allocated_storage": {
+              "constant_value": 20
+            },
+            "engine": {
+              "constant_value": "postgres"
+            },
+            "engine_version": {
+              "constant_value": "16.4"
+            },
+            "identifier": {
+              "constant_value": "synth-rds-defaults"
+            },
+            "instance_class": {
+              "constant_value": "db.t3.micro"
+            },
+            "password": {
+              "references": [
+                "var.db_password"
+              ]
+            },
+            "skip_final_snapshot": {
+              "constant_value": true
+            },
+            "username": {
+              "constant_value": "synth_admin"
+            }
+          },
+          "mode": "managed",
+          "name": "defaults",
+          "provider_config_key": "aws",
+          "schema_version": 2,
+          "type": "aws_db_instance"
+        }
+      ],
+      "variables": {
+        "db_password": {
+          "default": "SYNTH_DB_PASSWORD_DO_NOT_USE",
+          "sensitive": true
+        }
+      }
+    }
+  },
+  "errored": false,
+  "format_version": "1.2",
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_db_instance.defaults",
+          "identity": {
+            "account_id": null,
+            "identifier": null,
+            "region": null
+          },
+          "identity_schema_version": 0,
+          "mode": "managed",
+          "name": "defaults",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "schema_version": 2,
+          "sensitive_values": {
+            "blue_green_update": [],
+            "listener_endpoint": [],
+            "master_user_secret": [],
+            "password": true,
+            "password_wo": true,
+            "replicas": [],
+            "restore_to_point_in_time": [],
+            "s3_import": [],
+            "tags_all": {},
+            "vpc_security_group_ids": []
+          },
+          "type": "aws_db_instance",
+          "values": {
+            "allocated_storage": 20,
+            "allow_major_version_upgrade": null,
+            "apply_immediately": false,
+            "auto_minor_version_upgrade": true,
+            "blue_green_update": [],
+            "copy_tags_to_snapshot": false,
+            "custom_iam_instance_profile": null,
+            "customer_owned_ip_enabled": null,
+            "dedicated_log_volume": false,
+            "delete_automated_backups": true,
+            "deletion_protection": null,
+            "domain": null,
+            "domain_auth_secret_arn": null,
+            "domain_dns_ips": null,
+            "domain_iam_role_name": null,
+            "domain_ou": null,
+            "enabled_cloudwatch_logs_exports": null,
+            "engine": "postgres",
+            "engine_version": "16.4",
+            "final_snapshot_identifier": null,
+            "iam_database_authentication_enabled": null,
+            "identifier": "synth-rds-defaults",
+            "instance_class": "db.t3.micro",
+            "manage_master_user_password": null,
+            "max_allocated_storage": null,
+            "monitoring_interval": 0,
+            "password": "SYNTH_DB_PASSWORD_DO_NOT_USE",
+            "password_wo": null,
+            "password_wo_version": null,
+            "performance_insights_enabled": false,
+            "publicly_accessible": false,
+            "region": "us-east-1",
+            "replicate_source_db": null,
+            "restore_to_point_in_time": [],
+            "s3_import": [],
+            "skip_final_snapshot": true,
+            "storage_encrypted": null,
+            "tags": null,
+            "timeouts": null,
+            "upgrade_storage_config": null,
+            "username": "synth_admin",
+            "warning_event_categories": null
+          }
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "aws_db_instance.defaults",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "allocated_storage": 20,
+          "allow_major_version_upgrade": null,
+          "apply_immediately": false,
+          "auto_minor_version_upgrade": true,
+          "blue_green_update": [],
+          "copy_tags_to_snapshot": false,
+          "custom_iam_instance_profile": null,
+          "customer_owned_ip_enabled": null,
+          "dedicated_log_volume": false,
+          "delete_automated_backups": true,
+          "deletion_protection": null,
+          "domain": null,
+          "domain_auth_secret_arn": null,
+          "domain_dns_ips": null,
+          "domain_iam_role_name": null,
+          "domain_ou": null,
+          "enabled_cloudwatch_logs_exports": null,
+          "engine": "postgres",
+          "engine_version": "16.4",
+          "final_snapshot_identifier": null,
+          "iam_database_authentication_enabled": null,
+          "identifier": "synth-rds-defaults",
+          "instance_class": "db.t3.micro",
+          "manage_master_user_password": null,
+          "max_allocated_storage": null,
+          "monitoring_interval": 0,
+          "password": "SYNTH_DB_PASSWORD_DO_NOT_USE",
+          "password_wo": null,
+          "password_wo_version": null,
+          "performance_insights_enabled": false,
+          "publicly_accessible": false,
+          "region": "us-east-1",
+          "replicate_source_db": null,
+          "restore_to_point_in_time": [],
+          "s3_import": [],
+          "skip_final_snapshot": true,
+          "storage_encrypted": null,
+          "tags": null,
+          "timeouts": null,
+          "upgrade_storage_config": null,
+          "username": "synth_admin",
+          "warning_event_categories": null
+        },
+        "after_identity": {
+          "account_id": null,
+          "identifier": null,
+          "region": null
+        },
+        "after_sensitive": {
+          "blue_green_update": [],
+          "listener_endpoint": [],
+          "master_user_secret": [],
+          "password": true,
+          "password_wo": true,
+          "replicas": [],
+          "restore_to_point_in_time": [],
+          "s3_import": [],
+          "tags_all": {},
+          "vpc_security_group_ids": []
+        },
+        "after_unknown": {
+          "address": true,
+          "arn": true,
+          "availability_zone": true,
+          "backup_retention_period": true,
+          "backup_target": true,
+          "backup_window": true,
+          "blue_green_update": [],
+          "ca_cert_identifier": true,
+          "character_set_name": true,
+          "database_insights_mode": true,
+          "db_name": true,
+          "db_subnet_group_name": true,
+          "domain_fqdn": true,
+          "endpoint": true,
+          "engine_lifecycle_support": true,
+          "engine_version_actual": true,
+          "hosted_zone_id": true,
+          "id": true,
+          "identifier_prefix": true,
+          "iops": true,
+          "kms_key_id": true,
+          "latest_restorable_time": true,
+          "license_model": true,
+          "listener_endpoint": true,
+          "maintenance_window": true,
+          "master_user_secret": true,
+          "master_user_secret_kms_key_id": true,
+          "monitoring_role_arn": true,
+          "multi_az": true,
+          "nchar_character_set_name": true,
+          "network_type": true,
+          "option_group_name": true,
+          "parameter_group_name": true,
+          "performance_insights_kms_key_id": true,
+          "performance_insights_retention_period": true,
+          "port": true,
+          "replica_mode": true,
+          "replicas": true,
+          "resource_id": true,
+          "restore_to_point_in_time": [],
+          "s3_import": [],
+          "snapshot_identifier": true,
+          "status": true,
+          "storage_throughput": true,
+          "storage_type": true,
+          "tags_all": true,
+          "timezone": true,
+          "upgrade_rollout_order": true,
+          "vpc_security_group_ids": true
+        },
+        "before": null,
+        "before_sensitive": false
+      },
+      "mode": "managed",
+      "name": "defaults",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "type": "aws_db_instance"
+    }
+  ],
+  "terraform_version": "1.16.5",
+  "variables": {
+    "db_password": {
+      "value": "SYNTH_DB_PASSWORD_DO_NOT_USE"
+    }
+  }
+}

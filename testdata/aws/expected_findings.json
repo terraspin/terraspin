@@ -1,0 +1,22 @@
+{
+  "ebs_encrypted": [],
+  "ebs_unencrypted": ["AWS-EBS-001"],
+  "eks_private": [],
+  "eks_public_endpoint": ["AWS-EKS-001"],
+  "eks_public_restricted": [],
+  "iam_wildcard": [],
+  "kms_rotation_off": ["AWS-KMS-001"],
+  "kms_rotation_on": [],
+  "rds_defaults": [],
+  "rds_insecure": ["AWS-RDS-001", "AWS-RDS-002", "AWS-RDS-003"],
+  "rds_replace": ["AWS-RDS-001", "AWS-RDS-002", "AWS-RDS-003"],
+  "rds_secure": [],
+  "s3_destroy": [],
+  "s3_public": [],
+  "sg_all_traffic_world": ["AWS-SG-003"],
+  "sg_clean": [],
+  "sg_open_rdp_world": ["AWS-SG-002"],
+  "sg_open_ssh_ipv6": ["AWS-SG-004"],
+  "sg_open_ssh_world": ["AWS-SG-001"],
+  "sg_ssh_internal": []
+}

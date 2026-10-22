@@ -27,7 +27,7 @@ This example is the current text output for `testdata/plan.json` with `--no-ai`.
 - **Risk scoring** — deterministic 0–100 score per resource and overall tier (`critical`, `high`, `medium`, `low`)
 - **Blast radius analysis** — traverses Terraform root-module expression references
 - **Optional AI narrative** — Claude, OpenAI, or local Ollama when configured or selected with `--llm`
-- **Custom rules** — organization-specific risk policies in `.terraspin.yml`
+- **Policy rules** — embedded AWS checks and organization-specific policies in `.terraspin.yml`
 - **CI integration** — `--fail-on`, PR/MR comments, and Slack notifications
 - **MCP server** — run as a Model Context Protocol server for AI coding assistants
 - **Formats** — text, JSON, and Markdown
@@ -38,8 +38,10 @@ This example is the current text output for `testdata/plan.json` with `--no-ai`.
 - Redaction covers only values Terraform marks sensitive. Unmarked `user_data`, tags, ARNs, and account IDs remain visible; a list containing a sensitive element is redacted as one attribute.
 - Blast radius uses expression references from the Terraform root module. It excludes `module.*`, data-source, and `depends_on` relationships.
 - LLM calls use `llm.timeout` per attempt and retry network, timeout, HTTP 429, and 5xx failures. With default settings, the worst-case wait is about 110 seconds; successful requests stop sooner.
-- Custom rules do not support list indexes, wildcards, or regular-expression matching.
-- AWS-specific behavior is currently risk-score multipliers; there is no built-in AWS rule pack.
+- Custom rules support literal list indexes and one `[*]` wildcard, but not regular-expression matching.
+- Built-in AWS rules inspect plan values only; missing, `null`, and unknown values do not match an explicit expected value.
+
+Terraspin includes built-in AWS rules for security groups, RDS, EBS, KMS, and EKS. They are active by default and can be disabled per rule in configuration. See [Built-in AWS rules](docs/aws-rules.md) for checks, remediations, and limits.
 
 ## Install
 

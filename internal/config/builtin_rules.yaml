@@ -9,3 +9,83 @@ rules:
       contains: 0.0.0.0/0
       attribute_path_2: ingress[*].from_port
       value_2: 22
+  - id: AWS-SG-002
+    severity: critical
+    description: RDP is open to the internet.
+    remediation: Restrict RDP access to trusted CIDR ranges.
+    match:
+      resource_type_pattern: aws_security_group
+      attribute_path: ingress[*].cidr_blocks
+      contains: 0.0.0.0/0
+      attribute_path_2: ingress[*].from_port
+      value_2: 3389
+  - id: AWS-SG-003
+    severity: high
+    description: All network protocols are open to the internet.
+    remediation: Limit security group ingress to required protocols and trusted CIDR ranges.
+    match:
+      resource_type_pattern: aws_security_group
+      attribute_path: ingress[*].cidr_blocks
+      contains: 0.0.0.0/0
+      attribute_path_2: ingress[*].protocol
+      value_2: "-1"
+  - id: AWS-SG-004
+    severity: critical
+    description: SSH is open to the IPv6 internet.
+    remediation: Restrict SSH access to trusted IPv6 CIDR ranges.
+    match:
+      resource_type_pattern: aws_security_group
+      attribute_path: ingress[*].ipv6_cidr_blocks
+      contains: ::/0
+      attribute_path_2: ingress[*].from_port
+      value_2: 22
+  - id: AWS-RDS-001
+    severity: high
+    description: An RDS instance is publicly accessible.
+    remediation: Set publicly_accessible to false unless public database access is required.
+    match:
+      resource_type_pattern: aws_db_instance
+      attribute_path: publicly_accessible
+      value: true
+  - id: AWS-RDS-002
+    severity: high
+    description: An RDS instance does not enable storage encryption.
+    remediation: Set storage_encrypted to true for the RDS instance.
+    match:
+      resource_type_pattern: aws_db_instance
+      attribute_path: storage_encrypted
+      value: false
+  - id: AWS-RDS-003
+    severity: medium
+    description: An RDS instance does not enable deletion protection.
+    remediation: Set deletion_protection to true for the RDS instance.
+    match:
+      resource_type_pattern: aws_db_instance
+      attribute_path: deletion_protection
+      value: false
+  - id: AWS-EBS-001
+    severity: medium
+    description: An EBS volume does not enable encryption.
+    remediation: Set encrypted to true for the EBS volume.
+    match:
+      resource_type_pattern: aws_ebs_volume
+      attribute_path: encrypted
+      value: false
+  - id: AWS-KMS-001
+    severity: medium
+    description: A KMS key does not enable automatic rotation.
+    remediation: Set enable_key_rotation to true for the KMS key.
+    match:
+      resource_type_pattern: aws_kms_key
+      attribute_path: enable_key_rotation
+      value: false
+  - id: AWS-EKS-001
+    severity: high
+    description: An EKS public endpoint allows internet access.
+    remediation: Restrict public_access_cidrs or disable endpoint_public_access.
+    match:
+      resource_type_pattern: aws_eks_cluster
+      attribute_path: vpc_config[0].endpoint_public_access
+      value: true
+      attribute_path_2: vpc_config[0].public_access_cidrs
+      contains_2: 0.0.0.0/0
