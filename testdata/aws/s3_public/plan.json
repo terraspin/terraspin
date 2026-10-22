@@ -56,12 +56,7 @@
                 "aws_s3_bucket.public"
               ]
             },
-            "policy": {
-              "references": [
-                "aws_s3_bucket.public.arn",
-                "aws_s3_bucket.public"
-              ]
-            }
+            "policy": {}
           },
           "mode": "managed",
           "name": "public",
@@ -153,6 +148,7 @@
           "sensitive_values": {},
           "type": "aws_s3_bucket_policy",
           "values": {
+            "policy": "{\"Statement\":[{\"Action\":\"s3:GetObject\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"SYNTH_S3_PUBLIC/*\"}],\"Version\":\"2012-10-17\"}",
             "region": "us-east-1"
           }
         },
@@ -183,12 +179,6 @@
     }
   },
   "relevant_attributes": [
-    {
-      "attribute": [
-        "arn"
-      ],
-      "resource": "aws_s3_bucket.public"
-    },
     {
       "attribute": [
         "id"
@@ -269,6 +259,7 @@
           "create"
         ],
         "after": {
+          "policy": "{\"Statement\":[{\"Action\":\"s3:GetObject\",\"Effect\":\"Allow\",\"Principal\":\"*\",\"Resource\":\"SYNTH_S3_PUBLIC/*\"}],\"Version\":\"2012-10-17\"}",
           "region": "us-east-1"
         },
         "after_identity": {
@@ -279,8 +270,7 @@
         "after_sensitive": {},
         "after_unknown": {
           "bucket": true,
-          "id": true,
-          "policy": true
+          "id": true
         },
         "before": null,
         "before_sensitive": false

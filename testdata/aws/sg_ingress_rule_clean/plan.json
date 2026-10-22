@@ -1,0 +1,138 @@
+{
+  "applyable": true,
+  "complete": true,
+  "configuration": {
+    "provider_config": {
+      "aws": {
+        "expressions": {
+          "access_key": {
+            "constant_value": "test"
+          },
+          "region": {
+            "constant_value": "us-east-1"
+          },
+          "secret_key": {
+            "constant_value": "test"
+          },
+          "skip_credentials_validation": {
+            "constant_value": true
+          },
+          "skip_metadata_api_check": {
+            "constant_value": true
+          },
+          "skip_region_validation": {
+            "constant_value": true
+          },
+          "skip_requesting_account_id": {
+            "constant_value": true
+          }
+        },
+        "full_name": "registry.terraform.io/hashicorp/aws",
+        "name": "aws",
+        "version_constraint": "6.69.1"
+      }
+    },
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_vpc_security_group_ingress_rule.clean",
+          "expressions": {
+            "cidr_ipv4": {
+              "constant_value": "10.0.0.0/8"
+            },
+            "from_port": {
+              "constant_value": 443
+            },
+            "ip_protocol": {
+              "constant_value": "tcp"
+            },
+            "security_group_id": {
+              "constant_value": "sg-SYNTH_CLEAN"
+            },
+            "to_port": {
+              "constant_value": 443
+            }
+          },
+          "mode": "managed",
+          "name": "clean",
+          "provider_config_key": "aws",
+          "schema_version": 0,
+          "type": "aws_vpc_security_group_ingress_rule"
+        }
+      ]
+    }
+  },
+  "errored": false,
+  "format_version": "1.2",
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_vpc_security_group_ingress_rule.clean",
+          "mode": "managed",
+          "name": "clean",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "schema_version": 0,
+          "sensitive_values": {
+            "tags_all": {}
+          },
+          "type": "aws_vpc_security_group_ingress_rule",
+          "values": {
+            "cidr_ipv4": "10.0.0.0/8",
+            "cidr_ipv6": null,
+            "description": null,
+            "from_port": 443,
+            "ip_protocol": "tcp",
+            "prefix_list_id": null,
+            "referenced_security_group_id": null,
+            "region": "us-east-1",
+            "security_group_id": "sg-SYNTH_CLEAN",
+            "tags": null,
+            "tags_all": {},
+            "to_port": 443
+          }
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "aws_vpc_security_group_ingress_rule.clean",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "cidr_ipv4": "10.0.0.0/8",
+          "cidr_ipv6": null,
+          "description": null,
+          "from_port": 443,
+          "ip_protocol": "tcp",
+          "prefix_list_id": null,
+          "referenced_security_group_id": null,
+          "region": "us-east-1",
+          "security_group_id": "sg-SYNTH_CLEAN",
+          "tags": null,
+          "tags_all": {},
+          "to_port": 443
+        },
+        "after_sensitive": {
+          "tags_all": {}
+        },
+        "after_unknown": {
+          "arn": true,
+          "id": true,
+          "security_group_rule_id": true,
+          "tags_all": {}
+        },
+        "before": null,
+        "before_sensitive": false
+      },
+      "mode": "managed",
+      "name": "clean",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "type": "aws_vpc_security_group_ingress_rule"
+    }
+  ],
+  "terraform_version": "1.16.5"
+}

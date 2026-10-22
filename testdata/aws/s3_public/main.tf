@@ -37,7 +37,7 @@ resource "aws_s3_bucket_policy" "public" {
       Effect    = "Allow"
       Principal = "*"
       Action    = "s3:GetObject"
-      Resource  = "${aws_s3_bucket.public.arn}/*"
+      Resource  = "SYNTH_S3_PUBLIC/*"
     }]
   })
 }

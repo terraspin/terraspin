@@ -1,0 +1,138 @@
+{
+  "applyable": true,
+  "complete": true,
+  "configuration": {
+    "provider_config": {
+      "aws": {
+        "expressions": {
+          "access_key": {
+            "constant_value": "test"
+          },
+          "region": {
+            "constant_value": "us-east-1"
+          },
+          "secret_key": {
+            "constant_value": "test"
+          },
+          "skip_credentials_validation": {
+            "constant_value": true
+          },
+          "skip_metadata_api_check": {
+            "constant_value": true
+          },
+          "skip_region_validation": {
+            "constant_value": true
+          },
+          "skip_requesting_account_id": {
+            "constant_value": true
+          }
+        },
+        "full_name": "registry.terraform.io/hashicorp/aws",
+        "name": "aws",
+        "version_constraint": "6.69.1"
+      }
+    },
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_vpc_security_group_ingress_rule.public",
+          "expressions": {
+            "cidr_ipv4": {
+              "constant_value": "0.0.0.0/0"
+            },
+            "from_port": {
+              "constant_value": 3389
+            },
+            "ip_protocol": {
+              "constant_value": "tcp"
+            },
+            "security_group_id": {
+              "constant_value": "sg-SYNTH_RDP"
+            },
+            "to_port": {
+              "constant_value": 3389
+            }
+          },
+          "mode": "managed",
+          "name": "public",
+          "provider_config_key": "aws",
+          "schema_version": 0,
+          "type": "aws_vpc_security_group_ingress_rule"
+        }
+      ]
+    }
+  },
+  "errored": false,
+  "format_version": "1.2",
+  "planned_values": {
+    "root_module": {
+      "resources": [
+        {
+          "address": "aws_vpc_security_group_ingress_rule.public",
+          "mode": "managed",
+          "name": "public",
+          "provider_name": "registry.terraform.io/hashicorp/aws",
+          "schema_version": 0,
+          "sensitive_values": {
+            "tags_all": {}
+          },
+          "type": "aws_vpc_security_group_ingress_rule",
+          "values": {
+            "cidr_ipv4": "0.0.0.0/0",
+            "cidr_ipv6": null,
+            "description": null,
+            "from_port": 3389,
+            "ip_protocol": "tcp",
+            "prefix_list_id": null,
+            "referenced_security_group_id": null,
+            "region": "us-east-1",
+            "security_group_id": "sg-SYNTH_RDP",
+            "tags": null,
+            "tags_all": {},
+            "to_port": 3389
+          }
+        }
+      ]
+    }
+  },
+  "resource_changes": [
+    {
+      "address": "aws_vpc_security_group_ingress_rule.public",
+      "change": {
+        "actions": [
+          "create"
+        ],
+        "after": {
+          "cidr_ipv4": "0.0.0.0/0",
+          "cidr_ipv6": null,
+          "description": null,
+          "from_port": 3389,
+          "ip_protocol": "tcp",
+          "prefix_list_id": null,
+          "referenced_security_group_id": null,
+          "region": "us-east-1",
+          "security_group_id": "sg-SYNTH_RDP",
+          "tags": null,
+          "tags_all": {},
+          "to_port": 3389
+        },
+        "after_sensitive": {
+          "tags_all": {}
+        },
+        "after_unknown": {
+          "arn": true,
+          "id": true,
+          "security_group_rule_id": true,
+          "tags_all": {}
+        },
+        "before": null,
+        "before_sensitive": false
+      },
+      "mode": "managed",
+      "name": "public",
+      "provider_name": "registry.terraform.io/hashicorp/aws",
+      "type": "aws_vpc_security_group_ingress_rule"
+    }
+  ],
+  "terraform_version": "1.16.5"
+}

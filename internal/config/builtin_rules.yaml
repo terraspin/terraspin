@@ -20,7 +20,7 @@ rules:
       attribute_path_2: ingress[*].from_port
       value_2: 3389
   - id: AWS-SG-003
-    severity: high
+    severity: critical
     description: All network protocols are open to the internet.
     remediation: Limit security group ingress to required protocols and trusted CIDR ranges.
     match:
@@ -79,6 +79,92 @@ rules:
       resource_type_pattern: aws_kms_key
       attribute_path: enable_key_rotation
       value: false
+  - id: AWS-SG-005
+    severity: critical
+    description: A security group ingress rule exposes SSH to IPv4 internet.
+    remediation: Restrict SSH to trusted IPv4 CIDR ranges.
+    match:
+      resource_type_pattern: aws_vpc_security_group_ingress_rule
+      attribute_path: cidr_ipv4
+      value: 0.0.0.0/0
+      attribute_path_2: from_port
+      value_2: 22
+  - id: AWS-SG-006
+    severity: critical
+    description: A security group ingress rule exposes RDP to IPv4 internet.
+    remediation: Restrict RDP to trusted IPv4 CIDR ranges.
+    match:
+      resource_type_pattern: aws_vpc_security_group_ingress_rule
+      attribute_path: cidr_ipv4
+      value: 0.0.0.0/0
+      attribute_path_2: from_port
+      value_2: 3389
+  - id: AWS-SG-007
+    severity: critical
+    description: A security group ingress rule exposes all protocols to IPv4 internet.
+    remediation: Limit ingress to required protocols and trusted IPv4 CIDR ranges.
+    match:
+      resource_type_pattern: aws_vpc_security_group_ingress_rule
+      attribute_path: cidr_ipv4
+      value: 0.0.0.0/0
+      attribute_path_2: ip_protocol
+      value_2: "-1"
+  - id: AWS-SG-008
+    severity: critical
+    description: A security group ingress rule exposes SSH to IPv6 internet.
+    remediation: Restrict SSH to trusted IPv6 CIDR ranges.
+    match:
+      resource_type_pattern: aws_vpc_security_group_ingress_rule
+      attribute_path: cidr_ipv6
+      value: ::/0
+      attribute_path_2: from_port
+      value_2: 22
+  - id: AWS-S3-001
+    severity: high
+    description: An S3 public access block permits public bucket policies.
+    remediation: Enable block_public_policy and restrict_public_buckets.
+    match:
+      resource_type_pattern: aws_s3_bucket_public_access_block
+      attribute_path: block_public_policy
+      value: false
+      attribute_path_2: restrict_public_buckets
+      value_2: false
+  - id: AWS-S3-002
+    severity: high
+    description: An S3 bucket policy allows every principal.
+    remediation: Restrict the bucket policy principal to trusted identities.
+    match:
+      resource_type_pattern: aws_s3_bucket_policy
+      attribute_path: policy
+      contains: '"Principal":"*"'
+      attribute_path_2: policy
+      contains_2: '"Effect":"Allow"'
+  - id: AWS-IAM-001
+    severity: critical
+    description: An IAM policy allows every action on every resource.
+    remediation: Scope IAM actions and resources to the minimum required permissions.
+    match:
+      resource_type_pattern: aws_iam_*policy
+      attribute_path: policy
+      contains: '"Action":"*"'
+      attribute_path_2: policy
+      contains_2: '"Resource":"*"'
+  - id: AWS-IAM-002
+    severity: critical
+    description: An IAM role trust policy allows every principal.
+    remediation: Restrict the role trust policy to trusted principals.
+    match:
+      resource_type_pattern: aws_iam_role
+      attribute_path: assume_role_policy
+      contains: '"Principal":"*"'
+  - id: AWS-IAM-003
+    severity: critical
+    description: An IAM role trust policy allows every AWS principal.
+    remediation: Restrict the role trust policy to trusted AWS principals.
+    match:
+      resource_type_pattern: aws_iam_role
+      attribute_path: assume_role_policy
+      contains: '"AWS":"*"'
   - id: AWS-EKS-001
     severity: high
     description: An EKS public endpoint allows internet access.
