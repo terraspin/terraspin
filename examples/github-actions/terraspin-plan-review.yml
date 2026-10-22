@@ -1,0 +1,44 @@
+# Example only: copy this file into your repository's .github/workflows/ directory.
+# NOT TESTED AGAINST A REAL AWS ACCOUNT: validate the OIDC and Terraform steps in your account first.
+name: Terraspin plan review
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  id-token: write
+  pull-requests: write
+
+jobs:
+  plan-review:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: hashicorp/setup-terraform@b9cd54a3c349d3f38e8881555d616ced269862dd # v3.1.2
+        with:
+          terraform_version: 1.16.5
+
+      # NOT TESTED AGAINST A REAL AWS ACCOUNT: set these repository values for your role and region.
+      - uses: aws-actions/configure-aws-credentials@61815dcd50bd041e203e49132bacad1fd04d2708 # v5.1.1
+        with:
+          role-to-assume: ${{ secrets.AWS_ROLE_ARN }}
+          aws-region: ${{ vars.AWS_REGION }}
+
+      # NOT TESTED AGAINST A REAL AWS ACCOUNT: run these from the Terraform configuration directory.
+      - run: terraform init -input=false
+      - run: terraform plan -input=false -out=plan.tfplan
+      - run: terraform show -json plan.tfplan > plan.json
+
+      - name: Download and verify Terraspin
+        env:
+          TERRASPIN_VERSION: v0.1.0
+        run: |
+          asset="terraspin_${TERRASPIN_VERSION#v}_linux_amd64.tar.gz"
+          base="https://github.com/terraspin/terraspin/releases/download/${TERRASPIN_VERSION}"
+          curl -fLO "$base/$asset"
+          curl -fLO "$base/checksums.txt"
+          grep " $asset$" checksums.txt | sha256sum --check -
+          tar -xzf "$asset"
+
+      - run: ./terraspin --fail-on high --post-comment plan.json

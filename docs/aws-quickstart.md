@@ -64,3 +64,9 @@ rules:
 ```
 
 See [Configuration](configuration.md#built-in-rules) for every rule setting and [Built-in AWS rules](aws-rules.md) for checks and known limitations.
+
+## GitHub Actions example
+
+[The example workflow](../examples/github-actions/terraspin-plan-review.yml) checks out the repository, configures Terraform, obtains AWS credentials through OIDC, creates and exports a plan, verifies a Terraspin release archive, then posts a PR comment while failing on `high` risk.
+
+**Not tested against a real AWS account:** the example's OIDC and `terraform plan` steps need validation with your role, region, provider configuration, and state backend. Copy the file into `.github/workflows/` in the repository that owns the Terraform configuration.
