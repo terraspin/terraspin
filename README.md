@@ -99,6 +99,8 @@ disable_rules: [AWS-SG-001]
 
 For an AWS-hosted LLM narrative, use `--llm bedrock --model <model-id>` with your AWS credential chain. [Bedrock setup and rule configuration](docs/configuration.md#analyze-llm-behavior)
 
+→ [AWS quickstart](docs/aws-quickstart.md) · [Fixture demo](docs/demo.md)
+
 ## Documentation
 
 | Document                                       | Content                                            |
